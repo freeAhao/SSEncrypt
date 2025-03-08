@@ -2,6 +2,7 @@ package burp; /**
  * @author ahao
  * @date 2025/03/08
  */
+import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -25,7 +26,6 @@ public class BurpSSEPlugin implements IBurpExtender {
     private BlockingQueue<String> messages = new LinkedBlockingQueue<>(100);
     private ConcurrentHashMap<String, String> results = new ConcurrentHashMap<>();
     private ConcurrentHashMap<String, CountDownLatch> resultEvents = new ConcurrentHashMap<>();
-    private static final Logger logger = Logger.getLogger(BurpSSEPlugin.class.getName());
     private volatile boolean isRunning = false;
     private BurpSSEPlugin burpExtender;
     private IExtensionHelpers helpers;
@@ -37,8 +37,8 @@ public class BurpSSEPlugin implements IBurpExtender {
         this.burpExtender = this;
         this.callbacks = callbacks;
         this.helpers = callbacks.getHelpers();
-        this.stdout = new PrintWriter(callbacks.getStdout(),true);
-        this.stderr = new PrintWriter(callbacks.getStderr(),true);
+        System.setOut(new PrintStream(callbacks.getStdout(),true));
+        System.setErr(new PrintStream(callbacks.getStderr(),true));
         callbacks.setExtensionName("SSE Server Plugin");
         setupGUI();
     }
@@ -67,9 +67,34 @@ public class BurpSSEPlugin implements IBurpExtender {
         try {
             int port = Integer.parseInt(portField.getText().trim());
             server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.createContext("/sse", new SSEHandler());
-            server.createContext("/result", new ResultHandler());
-            server.createContext("/input", new InputHandler());
+
+            // SSE端点
+            server.createContext("/sse", new SSEHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    setCORSHeaders(exchange);
+                    super.handle(exchange);
+                }
+            });
+
+            // Result端点
+            server.createContext("/result", new ResultHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    setCORSHeaders(exchange);
+                    super.handle(exchange);
+                }
+            });
+
+            // Input端点
+            server.createContext("/input", new InputHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    setCORSHeaders(exchange);
+                    super.handle(exchange);
+                }
+            });
+
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
             isRunning = true;
@@ -78,6 +103,24 @@ public class BurpSSEPlugin implements IBurpExtender {
             callbacks.printOutput("Server started on port " + port);
         } catch (Exception e) {
             callbacks.printError("Error starting server: " + e.getMessage());
+        }
+    }
+
+    // 添加CORS头的方法
+    private void setCORSHeaders(HttpExchange exchange) {
+        Headers headers = exchange.getResponseHeaders();
+        headers.add("Access-Control-Allow-Origin", "*"); // 允许所有域名访问
+        headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // 允许的HTTP方法
+        headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization"); // 允许的请求头
+        headers.add("Access-Control-Max-Age", "86400"); // 预检请求缓存时间(秒)
+
+        // 处理OPTIONS预检请求
+        if ("OPTIONS".equals(exchange.getRequestMethod())) {
+            try {
+                exchange.sendResponseHeaders(204, -1); // No Content
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -105,7 +148,7 @@ public class BurpSSEPlugin implements IBurpExtender {
                     os.flush();
                 }
             } catch (InterruptedException e) {
-                logger.warning("SSE interrupted: " + e.getMessage());
+                System.out.println("SSE interrupted: " + e.getMessage());
             } finally {
                 os.close();
             }
@@ -129,7 +172,7 @@ public class BurpSSEPlugin implements IBurpExtender {
                 if (latch != null) latch.countDown();
                 sendResponse(exchange, 200, "{\"error\": false}");
             } catch (Exception e) {
-                logger.severe("Error in /result: " + e.getMessage());
+                System.err.println("Error in /result: " + e.getMessage());
                 sendResponse(exchange, 200, "{\"error\": true}");
             }
         }
@@ -164,7 +207,7 @@ public class BurpSSEPlugin implements IBurpExtender {
 
                 sendResponse(exchange, 200, json.toString());
             } catch (Exception e) {
-                logger.severe("Error in /input: " + e.getMessage());
+                System.err.println("Error in /input: " + e.getMessage());
                 sendResponse(exchange, 200, "{\"error\": true, \"output\": \"Error\"}");
             }
         }
