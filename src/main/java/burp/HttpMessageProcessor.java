@@ -2,6 +2,10 @@ package burp;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+// TODO: 3/9/25 支持多层标签嵌套，从最里面的嵌套开始处理
 
 public class HttpMessageProcessor {
     private final BurpSSEPlugin plugin;
@@ -30,9 +34,11 @@ public class HttpMessageProcessor {
             String headersStr = requestStr.substring(0, bodyOffset);
             String bodyStr = requestStr.substring(bodyOffset);
 
+            String modifiedHeaders = processHeaders(headersStr);
             String modifiedBody = processBody(bodyStr);
-            if (!modifiedBody.equals(bodyStr)) {
-                updateRequest(messageInfo, requestInfo.getHeaders(), modifiedBody);
+
+            if (!modifiedHeaders.equals(headersStr) || !modifiedBody.equals(bodyStr)) {
+                updateRequest(messageInfo, plugin.getHelpers().analyzeRequest(modifiedHeaders.getBytes()).getHeaders(), modifiedBody);
             }
         } catch (Exception e) {
             plugin.getCallbacks().printError("Unexpected error in processHttpMessage: " + e.getMessage());
@@ -40,10 +46,36 @@ public class HttpMessageProcessor {
         }
     }
 
+    private String processHeaders(String headersStr) throws Exception {
+        String regex = "\\[\\[(.+?):(.+?)\\]\\]";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(headersStr);
+
+        StringBuilder modifiedHeaders = new StringBuilder();
+        int lastEnd = 0;
+
+        while (matcher.find()) {
+            modifiedHeaders.append(headersStr.substring(lastEnd, matcher.start()));
+            String scriptName = matcher.group(1);
+            String input = matcher.group(2);
+            String script = plugin.getScripts().get(scriptName);
+
+            if (script != null) {
+                String output = plugin.processWithSSE(input, script);
+                modifiedHeaders.append(output != null ? output : "[[NULL_OUTPUT:" + scriptName + "]]" );
+            } else {
+                modifiedHeaders.append(matcher.group(0));
+            }
+            lastEnd = matcher.end();
+        }
+        modifiedHeaders.append(headersStr.substring(lastEnd));
+        return modifiedHeaders.toString();
+    }
+
     private String processBody(String bodyStr) throws Exception {
         String regex = "\\[\\[(.+?):(.+?)\\]\\]";
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
-        java.util.regex.Matcher matcher = pattern.matcher(bodyStr);
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(bodyStr);
 
         StringBuilder modifiedBody = new StringBuilder();
         int lastEnd = 0;
@@ -56,7 +88,7 @@ public class HttpMessageProcessor {
 
             if (script != null) {
                 String output = plugin.processWithSSE(input, script);
-                modifiedBody.append(output != null ? output : "[[NULL_OUTPUT:" + scriptName + "]]");
+                modifiedBody.append(output != null ? output : "[[NULL_OUTPUT:" + scriptName + "]]" );
             } else {
                 modifiedBody.append(matcher.group(0));
             }

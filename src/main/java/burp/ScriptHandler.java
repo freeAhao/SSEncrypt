@@ -75,4 +75,8 @@ public class ScriptHandler {
             scriptListModel.addElement(scriptName);
         }
     }
+
+    public boolean contains(String scripName){
+        return scriptListModel.contains(scripName);
+    }
 }

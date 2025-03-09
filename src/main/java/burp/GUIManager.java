@@ -2,7 +2,12 @@ package burp;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
+// TODO: 3/9/25 添加脚本下载按钮,点击弹出保存对话框。
+// TODO: 3/9/25 优化界面外观，美化。
+// TODO: 3/9/25 scriptContentArea用于显示JS代码，使用三方库实现JS代码编辑/高亮等功能。
 public class GUIManager {
     private final BurpSSEPlugin plugin;
     private JPanel panel;
@@ -74,6 +79,17 @@ public class GUIManager {
 
         ScriptHandler scriptHandler = new ScriptHandler(plugin, scriptListModel, scriptList,
                 scriptNameField, scriptContentArea);
+        scriptNameField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                super.keyReleased(e);
+                if (scriptHandler.contains(scriptNameField.getText())){
+                    addScript.setText("Update");
+                } else {
+                    addScript.setText("Add");
+                }
+            }
+        });
         addScript.addActionListener(e -> scriptHandler.addScript());
         editScript.addActionListener(e -> scriptHandler.editScript());
         deleteScript.addActionListener(e -> scriptHandler.deleteScript());
