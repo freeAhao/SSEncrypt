@@ -11,13 +11,16 @@ public class ScriptHandler {
     private final JTextField scriptNameField;
     private final JTextArea scriptContentArea;
 
+    private final JButton addScript;
+
     public ScriptHandler(BurpSSEPlugin plugin, DefaultListModel<String> scriptListModel,
-                         JList<String> scriptList, JTextField scriptNameField, RSyntaxTextArea scriptContentArea) {
+                         JList<String> scriptList, JTextField scriptNameField, RSyntaxTextArea scriptContentArea, JButton addScript) {
         this.plugin = plugin;
         this.scriptListModel = scriptListModel;
         this.scriptList = scriptList;
         this.scriptNameField = scriptNameField;
         this.scriptContentArea = scriptContentArea;
+        this.addScript = addScript;
 
         loadScriptsToList();
     }
@@ -68,6 +71,7 @@ public class ScriptHandler {
         if (selected != null) {
             scriptNameField.setText(selected);
             scriptContentArea.setText(plugin.getScripts().get(selected));
+            addScript.setText("Update");
         }
     }
 

@@ -9,9 +9,8 @@ import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class GUIManager {
     private final BurpSSEPlugin plugin;
@@ -87,7 +86,7 @@ public class GUIManager {
         JButton addScript = new JButton("Add");
         JButton editScript = new JButton("Edit");
         JButton deleteScript = new JButton("Delete");
-        downloadScriptButton = new JButton("Download Script");
+        downloadScriptButton = new JButton("TamperMonkey Script");
 
         scriptControlPanel.add(new JLabel("Script Name:"));
         scriptControlPanel.add(scriptNameField);
@@ -97,7 +96,7 @@ public class GUIManager {
         scriptControlPanel.add(downloadScriptButton);
 
         ScriptHandler scriptHandler = new ScriptHandler(plugin, scriptListModel, scriptList,
-                scriptNameField, scriptContentArea);
+                scriptNameField, scriptContentArea, addScript);
         scriptNameField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -122,23 +121,35 @@ public class GUIManager {
 
         panel.add(scriptPanel, BorderLayout.CENTER);
     }
+    private String readScriptContent() {
+        String scriptContent;
+        try {
+            // 从资源目录读取 tampermonkey.js
+            InputStream inputStream = getClass().getResourceAsStream("/tampermonkey.js");
+            if (inputStream == null) {
+                throw new FileNotFoundException("Cannot find tampermonkey.js in resources");
+            }
 
-    private void downloadScript() {
-        String scriptName = scriptNameField.getText();
-        String scriptContent = scriptContentArea.getText();
-
-        if (scriptName.isEmpty() || scriptContent.isEmpty()) {
-            JOptionPane.showMessageDialog(panel, "Script name or content cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+            // 将 InputStream 转换为字符串
+            scriptContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            inputStream.close();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(panel,
+                    "Error reading tampermonkey.js: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            scriptContent = ""; // 设置默认空值以防后续操作失败
         }
-
+        return scriptContent;
+    }
+    private void downloadScript() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File(scriptName + ".js"));
+        fileChooser.setSelectedFile(new File("script.js"));
         int option = fileChooser.showSaveDialog(panel);
         if (option == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
             try (FileWriter writer = new FileWriter(file)) {
-                writer.write(scriptContent);
+                writer.write(readScriptContent());
                 JOptionPane.showMessageDialog(panel, "Script saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(panel, "Error saving script: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
