@@ -1,22 +1,27 @@
 package burp;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+
 import javax.swing.*;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
-// TODO: 3/9/25 添加脚本下载按钮,点击弹出保存对话框。
-// TODO: 3/9/25 优化界面外观，美化。
-// TODO: 3/9/25 scriptContentArea用于显示JS代码，使用三方库实现JS代码编辑/高亮等功能。
 public class GUIManager {
     private final BurpSSEPlugin plugin;
     private JPanel panel;
     private JTextField portField;
-    private JButton startButton, stopButton;
+    private JButton startButton, stopButton, downloadScriptButton;
     private JList<String> scriptList;
     private DefaultListModel<String> scriptListModel;
     private JTextField scriptNameField;
-    private JTextArea scriptContentArea;
+    private RSyntaxTextArea scriptContentArea;
     private final HttpServerManager serverManager;
 
     public GUIManager(BurpSSEPlugin plugin) {
@@ -64,18 +69,32 @@ public class GUIManager {
         scriptListModel = new DefaultListModel<>();
         scriptList = new JList<>(scriptListModel);
         scriptNameField = new JTextField(20);
-        scriptContentArea = new JTextArea(10, 30);
+
+        // 初始化 RSyntaxTextArea
+//        javax.swing.text.JTextComponent/removeKeymap "RTextAreaKeymap"
+        JTextComponent.removeKeymap("RTextAreaKeymap");
+        scriptContentArea = new RSyntaxTextArea(10, 30);
+
+        scriptContentArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); // 设置语法高亮
+        scriptContentArea.setCodeFoldingEnabled(true); // 启用代码折叠
+        scriptContentArea.setEditable(true); // 确保可编辑
+
+        // 将 RSyntaxTextArea 包裹在 RTextScrollPane 中
+        RTextScrollPane scrollPane = new RTextScrollPane(scriptContentArea);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // 可选：设置边框
 
         JPanel scriptControlPanel = new JPanel();
         JButton addScript = new JButton("Add");
         JButton editScript = new JButton("Edit");
         JButton deleteScript = new JButton("Delete");
+        downloadScriptButton = new JButton("Download Script");
 
         scriptControlPanel.add(new JLabel("Script Name:"));
         scriptControlPanel.add(scriptNameField);
         scriptControlPanel.add(addScript);
         scriptControlPanel.add(editScript);
         scriptControlPanel.add(deleteScript);
+        scriptControlPanel.add(downloadScriptButton);
 
         ScriptHandler scriptHandler = new ScriptHandler(plugin, scriptListModel, scriptList,
                 scriptNameField, scriptContentArea);
@@ -83,7 +102,7 @@ public class GUIManager {
             @Override
             public void keyReleased(KeyEvent e) {
                 super.keyReleased(e);
-                if (scriptHandler.contains(scriptNameField.getText())){
+                if (scriptHandler.contains(scriptNameField.getText())) {
                     addScript.setText("Update");
                 } else {
                     addScript.setText("Add");
@@ -95,14 +114,38 @@ public class GUIManager {
         deleteScript.addActionListener(e -> scriptHandler.deleteScript());
         scriptList.addListSelectionListener(e -> scriptHandler.handleScriptSelection());
 
+        downloadScriptButton.addActionListener(e -> downloadScript());
+
         scriptPanel.add(new JScrollPane(scriptList), BorderLayout.WEST);
-        scriptPanel.add(new JScrollPane(scriptContentArea), BorderLayout.CENTER);
+        scriptPanel.add(scrollPane, BorderLayout.CENTER); // 使用 RTextScrollPane
         scriptPanel.add(scriptControlPanel, BorderLayout.NORTH);
 
         panel.add(scriptPanel, BorderLayout.CENTER);
     }
 
-    // 更新按钮状态的方法
+    private void downloadScript() {
+        String scriptName = scriptNameField.getText();
+        String scriptContent = scriptContentArea.getText();
+
+        if (scriptName.isEmpty() || scriptContent.isEmpty()) {
+            JOptionPane.showMessageDialog(panel, "Script name or content cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(scriptName + ".js"));
+        int option = fileChooser.showSaveDialog(panel);
+        if (option == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.write(scriptContent);
+                JOptionPane.showMessageDialog(panel, "Script saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(panel, "Error saving script: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void updateButtonStates() {
         startButton.setEnabled(!plugin.isRunning());
         stopButton.setEnabled(plugin.isRunning());
@@ -125,7 +168,6 @@ public class GUIManager {
         }
     }
 
-    // 添加 getter 方法以便其他类访问
     public HttpServerManager getServerManager() {
         return serverManager;
     }

@@ -1,12 +1,10 @@
 package burp;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// TODO: 3/9/25 支持多层标签嵌套，从最里面的嵌套开始处理
-
+// 支持多层标签嵌套，从最里面的嵌套开始处理
 public class HttpMessageProcessor {
     private final BurpSSEPlugin plugin;
 
@@ -34,8 +32,8 @@ public class HttpMessageProcessor {
             String headersStr = requestStr.substring(0, bodyOffset);
             String bodyStr = requestStr.substring(bodyOffset);
 
-            String modifiedHeaders = processHeaders(headersStr);
-            String modifiedBody = processBody(bodyStr);
+            String modifiedHeaders = resolveNestedTags(headersStr);
+            String modifiedBody = resolveNestedTags(bodyStr);
 
             if (!modifiedHeaders.equals(headersStr) || !modifiedBody.equals(bodyStr)) {
                 updateRequest(messageInfo, plugin.getHelpers().analyzeRequest(modifiedHeaders.getBytes()).getHeaders(), modifiedBody);
@@ -46,67 +44,48 @@ public class HttpMessageProcessor {
         }
     }
 
-    private String processHeaders(String headersStr) throws Exception {
-        String regex = "\\[\\[(.+?):(.+?)\\]\\]";
+    private String resolveNestedTags(String input) throws Exception {
+        String regex = "\\[\\[([^:]+?):((?:[^\\[\\]]|\\[\\[(?:[^\\[\\]]|\\[\\[.*?\\]\\])*?\\]\\])*?)\\]\\]";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(headersStr);
 
-        StringBuilder modifiedHeaders = new StringBuilder();
-        int lastEnd = 0;
+        while (true) {
+            Matcher matcher = pattern.matcher(input);
+            boolean found = false;
+            StringBuffer sb = new StringBuffer();
 
-        while (matcher.find()) {
-            modifiedHeaders.append(headersStr.substring(lastEnd, matcher.start()));
-            String scriptName = matcher.group(1);
-            String input = matcher.group(2);
-            String script = plugin.getScripts().get(scriptName);
+            while (matcher.find()) {
+                found = true;
+                String fullMatch = matcher.group(0);  // 确保完整匹配
+                String scriptName = matcher.group(1);
+                String nestedInput = matcher.group(2);
 
-            if (script != null) {
-                String output = plugin.processWithSSE(input, script);
-                modifiedHeaders.append(output != null ? output : "[[NULL_OUTPUT:" + scriptName + "]]" );
-            } else {
-                modifiedHeaders.append(matcher.group(0));
+                // 递归解析嵌套内容
+                String resolvedInput = resolveNestedTags(nestedInput);
+                String script = plugin.getScripts().get(scriptName);
+
+                String output;
+                if (script != null) {
+                    output = plugin.processWithSSE(resolvedInput, script);
+                    if (output == null) {
+                        output = "[[NULL_OUTPUT:" + scriptName + "]]";
+                    }
+                } else {
+                    output = fullMatch;
+                }
+
+                matcher.appendReplacement(sb, Matcher.quoteReplacement(output));
             }
-            lastEnd = matcher.end();
+            matcher.appendTail(sb);
+            input = sb.toString();
+
+            if (!found) break;  // 如果没有更多匹配，则退出循环
         }
-        modifiedHeaders.append(headersStr.substring(lastEnd));
-        return modifiedHeaders.toString();
-    }
-
-    private String processBody(String bodyStr) throws Exception {
-        String regex = "\\[\\[(.+?):(.+?)\\]\\]";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(bodyStr);
-
-        StringBuilder modifiedBody = new StringBuilder();
-        int lastEnd = 0;
-
-        while (matcher.find()) {
-            modifiedBody.append(bodyStr.substring(lastEnd, matcher.start()));
-            String scriptName = matcher.group(1);
-            String input = matcher.group(2);
-            String script = plugin.getScripts().get(scriptName);
-
-            if (script != null) {
-                String output = plugin.processWithSSE(input, script);
-                modifiedBody.append(output != null ? output : "[[NULL_OUTPUT:" + scriptName + "]]" );
-            } else {
-                modifiedBody.append(matcher.group(0));
-            }
-            lastEnd = matcher.end();
-        }
-        modifiedBody.append(bodyStr.substring(lastEnd));
-        return modifiedBody.toString();
+        return input;
     }
 
     private void updateRequest(IHttpRequestResponse messageInfo, List<String> headers, String modifiedBodyStr) {
         byte[] modifiedBodyBytes = plugin.getHelpers().stringToBytes(modifiedBodyStr);
-        Iterator<String> iterator = headers.iterator();
-        while (iterator.hasNext()) {
-            String header = iterator.next();
-            if (header.toLowerCase().startsWith("content-length:")) {
-                iterator.remove();
-            }
-        }
+        headers.removeIf(header -> header.toLowerCase().startsWith("content-length:"));
         headers.add("Content-Length: " + modifiedBodyBytes.length);
 
         byte[] newRequest = plugin.getHelpers().buildHttpMessage(headers, modifiedBodyBytes);
