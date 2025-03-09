@@ -13,7 +13,7 @@ public class HttpMessageProcessor {
     }
 
     public void processHttpMessage(int toolFlag, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
-        if (!messageIsRequest || !(toolFlag == IBurpExtenderCallbacks.TOOL_REPEATER ||
+        if (!this.plugin.isRunning || !messageIsRequest || !(toolFlag == IBurpExtenderCallbacks.TOOL_REPEATER ||
                 toolFlag == IBurpExtenderCallbacks.TOOL_INTRUDER)) {
             return;
         }
