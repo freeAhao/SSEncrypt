@@ -161,4 +161,8 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
     public void extensionUnloaded() {
         this.serverManager.stopServer();
     }
+
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
 }

@@ -27,6 +27,7 @@ public class GUIManager {
     private JTextField scriptNameField;
     private RSyntaxTextArea scriptContentArea;
     private final HttpServerManager serverManager;
+    private JTable decryptTable;
 
     public GUIManager(BurpSSEPlugin plugin) {
         this.plugin = plugin;
@@ -96,7 +97,7 @@ public class GUIManager {
         // 创建表格
         String[] columnNames = {"URL Path", "Regex Pattern", "Decrypt Script"};
         Object[][] data = {}; // 初始空数据
-        JTable decryptTable = new JTable(new DefaultTableModel(data, columnNames));
+        decryptTable = new JTable(new DefaultTableModel(data, columnNames));
         JScrollPane tableScrollPane = new JScrollPane(decryptTable);
         tableScrollPane.setPreferredSize(new Dimension(400, 100));
 
@@ -211,6 +212,11 @@ public class GUIManager {
     public void setRunning(boolean running) {
         startButton.setEnabled(!running);
         stopButton.setEnabled(running);
+    }
+
+    public void addDecryptRule(String urlPath, String regex, String selectedScript) {
+        DefaultTableModel model = (DefaultTableModel) decryptTable.getModel();
+        model.addRow(new Object[]{urlPath, regex, selectedScript});
     }
 
     class BurpTab implements ITab {
