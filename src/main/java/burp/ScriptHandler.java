@@ -1,5 +1,7 @@
 package burp;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+
 import javax.swing.*;
 
 public class ScriptHandler {
@@ -10,7 +12,7 @@ public class ScriptHandler {
     private final JTextArea scriptContentArea;
 
     public ScriptHandler(BurpSSEPlugin plugin, DefaultListModel<String> scriptListModel,
-                         JList<String> scriptList, JTextField scriptNameField, JTextArea scriptContentArea) {
+                         JList<String> scriptList, JTextField scriptNameField, RSyntaxTextArea scriptContentArea) {
         this.plugin = plugin;
         this.scriptListModel = scriptListModel;
         this.scriptList = scriptList;
