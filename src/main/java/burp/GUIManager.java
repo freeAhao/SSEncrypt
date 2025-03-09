@@ -5,10 +5,13 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 
@@ -17,8 +20,10 @@ public class GUIManager {
     private JPanel panel;
     private JTextField portField;
     private JButton startButton, stopButton, downloadScriptButton;
-    private JList<String> scriptList;
-    private DefaultListModel<String> scriptListModel;
+    private JList<String> encryptScriptList;
+    private JList<String> decryptScriptList;
+    private DefaultListModel<String> encryptScriptListModel;
+    private DefaultListModel<String> decryptScriptListModel;
     private JTextField scriptNameField;
     private RSyntaxTextArea scriptContentArea;
     private final HttpServerManager serverManager;
@@ -65,42 +70,55 @@ public class GUIManager {
 
     private void setupScriptPanel() {
         JPanel scriptPanel = new JPanel(new BorderLayout());
-        scriptListModel = new DefaultListModel<>();
-        scriptList = new JList<>(scriptListModel);
+
+        // 加密脚本列表部分
+        encryptScriptListModel = new DefaultListModel<>();
+        encryptScriptList = new JList<>(encryptScriptListModel);
+        JLabel encryptLabel = new JLabel("Encryption Scripts:");
+
+        // 解密脚本列表部分
+        decryptScriptListModel = new DefaultListModel<>();
+        decryptScriptList = new JList<>(decryptScriptListModel);
+        JLabel decryptLabel = new JLabel("Decryption Scripts:");
+
         scriptNameField = new JTextField(20);
 
         // 初始化 RSyntaxTextArea
-//        javax.swing.text.JTextComponent/removeKeymap "RTextAreaKeymap"
         JTextComponent.removeKeymap("RTextAreaKeymap");
         scriptContentArea = new RSyntaxTextArea(10, 30);
+        scriptContentArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+        scriptContentArea.setCodeFoldingEnabled(true);
+        scriptContentArea.setEditable(true);
 
-        scriptContentArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT); // 设置语法高亮
-        scriptContentArea.setCodeFoldingEnabled(true); // 启用代码折叠
-        scriptContentArea.setEditable(true); // 确保可编辑
-
-        // 将 RSyntaxTextArea 包裹在 RTextScrollPane 中
         RTextScrollPane scrollPane = new RTextScrollPane(scriptContentArea);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // 可选：设置边框
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
+        // 创建表格
+        String[] columnNames = {"URL Path", "Regex Pattern", "Decrypt Script"};
+        Object[][] data = {}; // 初始空数据
+        JTable decryptTable = new JTable(new DefaultTableModel(data, columnNames));
+        JScrollPane tableScrollPane = new JScrollPane(decryptTable);
+        tableScrollPane.setPreferredSize(new Dimension(400, 100));
+
+        // 控制面板
         JPanel scriptControlPanel = new JPanel();
         JButton addScript = new JButton("Add");
-        JButton editScript = new JButton("Edit");
         JButton deleteScript = new JButton("Delete");
         downloadScriptButton = new JButton("TamperMonkey Script");
 
         scriptControlPanel.add(new JLabel("Script Name:"));
         scriptControlPanel.add(scriptNameField);
         scriptControlPanel.add(addScript);
-        scriptControlPanel.add(editScript);
         scriptControlPanel.add(deleteScript);
         scriptControlPanel.add(downloadScriptButton);
 
-        ScriptHandler scriptHandler = new ScriptHandler(plugin, scriptListModel, scriptList,
+        ScriptHandler scriptHandler = new ScriptHandler(plugin,
+                encryptScriptListModel, encryptScriptList,
+                decryptScriptListModel, decryptScriptList,
                 scriptNameField, scriptContentArea, addScript);
         scriptNameField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
-                super.keyReleased(e);
                 if (scriptHandler.contains(scriptNameField.getText())) {
                     addScript.setText("Update");
                 } else {
@@ -108,17 +126,45 @@ public class GUIManager {
                 }
             }
         });
+        encryptScriptList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                scriptHandler.setEncryptListSelected(true); // 点击时设置为true
+            }
+        });
+
+        decryptScriptList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                scriptHandler.setEncryptListSelected(false); // 点击时设置为false
+            }
+        });
         addScript.addActionListener(e -> scriptHandler.addScript());
-        editScript.addActionListener(e -> scriptHandler.editScript());
         deleteScript.addActionListener(e -> scriptHandler.deleteScript());
-        scriptList.addListSelectionListener(e -> scriptHandler.handleScriptSelection());
+        encryptScriptList.addListSelectionListener(e -> scriptHandler.handleEncryptScriptSelection());
+
+        // 处理解密脚本
+        decryptScriptList.addListSelectionListener(e -> scriptHandler.handleDecryptScriptSelection());
 
         downloadScriptButton.addActionListener(e -> downloadScript());
 
-        scriptPanel.add(new JScrollPane(scriptList), BorderLayout.WEST);
-        scriptPanel.add(scrollPane, BorderLayout.CENTER); // 使用 RTextScrollPane
-        scriptPanel.add(scriptControlPanel, BorderLayout.NORTH);
+        // 布局设置
+        JPanel listsPanel = new JPanel(new GridLayout(2, 1));
+        JPanel encryptPanel = new JPanel(new BorderLayout());
+        encryptPanel.add(encryptLabel, BorderLayout.NORTH);
+        encryptPanel.add(new JScrollPane(encryptScriptList), BorderLayout.CENTER);
 
+        JPanel decryptPanel = new JPanel(new BorderLayout());
+        decryptPanel.add(decryptLabel, BorderLayout.NORTH);
+        decryptPanel.add(new JScrollPane(decryptScriptList), BorderLayout.CENTER);
+
+        listsPanel.add(encryptPanel);
+        listsPanel.add(decryptPanel);
+
+        scriptPanel.add(listsPanel, BorderLayout.WEST);
+        scriptPanel.add(scrollPane, BorderLayout.CENTER);
+        scriptPanel.add(scriptControlPanel, BorderLayout.NORTH);
+        scriptPanel.add(tableScrollPane, BorderLayout.SOUTH); // 添加表格在底部
         panel.add(scriptPanel, BorderLayout.CENTER);
     }
     private String readScriptContent() {
