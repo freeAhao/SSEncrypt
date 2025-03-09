@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.*;
 
-public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IContextMenuFactory, IHttpListener {
+public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IContextMenuFactory, IHttpListener, IMessageEditorTabFactory {
     private IBurpExtenderCallbacks callbacks;
     private IExtensionHelpers helpers;
     private HttpServerManager serverManager;
@@ -36,6 +36,7 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         callbacks.registerExtensionStateListener(this);
         callbacks.registerContextMenuFactory(this);
         callbacks.registerHttpListener(this);
+        callbacks.registerMessageEditorTabFactory(this); // 注册消息编辑 Tab
 
         configFile = new File(callbacks.getExtensionFilename()).getParentFile();
         configFile = new File(configFile, CONFIG_FILE);
@@ -164,5 +165,10 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
 
     public GUIManager getGuiManager() {
         return guiManager;
+    }
+
+    @Override
+    public IMessageEditorTab createNewInstance(IMessageEditorController controller, boolean editable) {
+        return new MessageEditorTab(this, controller);
     }
 }
