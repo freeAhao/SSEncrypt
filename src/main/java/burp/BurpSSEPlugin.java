@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -22,7 +23,8 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
     protected ConcurrentHashMap<String, String> results = new ConcurrentHashMap<>();
     protected ConcurrentHashMap<String, CountDownLatch> resultEvents = new ConcurrentHashMap<>();
     protected volatile boolean isRunning = false;
-    protected Map<String, String> scripts = new HashMap<>();
+    protected Map<String, String> encryptScripts = new HashMap<>();
+    protected Map<String, String> decryptScripts = new HashMap<>();
     private static final String CONFIG_FILE = "sse_scripts.json";
     private File configFile;
 
@@ -34,7 +36,6 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         callbacks.registerExtensionStateListener(this);
         callbacks.registerContextMenuFactory(this);
         callbacks.registerHttpListener(this);
-
 
         configFile = new File(callbacks.getExtensionFilename()).getParentFile();
         configFile = new File(configFile, CONFIG_FILE);
@@ -50,23 +51,33 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         return serverManager;
     }
 
-    // 保存脚本到配置文件
     public void saveScriptsToConfig() {
         try {
             JSONObject config = new JSONObject();
-            JSONArray scriptsArray = new JSONArray();
 
-            for (Map.Entry<String, String> entry : scripts.entrySet()) {
+            // 保存加密脚本
+            JSONArray encryptScriptsArray = new JSONArray();
+            for (Map.Entry<String, String> entry : encryptScripts.entrySet()) {
                 JSONObject scriptObj = new JSONObject();
                 scriptObj.put("name", entry.getKey());
                 scriptObj.put("content", entry.getValue());
-                scriptsArray.put(scriptObj);
+                encryptScriptsArray.put(scriptObj);
             }
 
-            config.put("scripts", scriptsArray);
+            // 保存解密脚本
+            JSONArray decryptScriptsArray = new JSONArray();
+            for (Map.Entry<String, String> entry : decryptScripts.entrySet()) {
+                JSONObject scriptObj = new JSONObject();
+                scriptObj.put("name", entry.getKey());
+                scriptObj.put("content", entry.getValue());
+                decryptScriptsArray.put(scriptObj);
+            }
+
+            config.put("encrypt_scripts", encryptScriptsArray);
+            config.put("decrypt_scripts", decryptScriptsArray);
 
             try (FileWriter writer = new FileWriter(configFile)) {
-                writer.write(config.toString(2)); // 格式化输出，缩进2个空格
+                writer.write(config.toString(2));
                 callbacks.printOutput("Scripts saved to " + configFile.getAbsolutePath());
             }
         } catch (IOException e) {
@@ -74,7 +85,6 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         }
     }
 
-    // 从配置文件加载脚本
     private void loadScriptsFromConfig() {
         if (!configFile.exists()) {
             callbacks.printOutput("No config file found at " + configFile.getAbsolutePath());
@@ -84,16 +94,34 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         try {
             String content = new String(Files.readAllBytes(configFile.toPath()));
             JSONObject config = new JSONObject(content);
-            JSONArray scriptsArray = config.getJSONArray("scripts");
 
-            scripts.clear();
-            for (int i = 0; i < scriptsArray.length(); i++) {
-                JSONObject scriptObj = scriptsArray.getJSONObject(i);
-                String name = scriptObj.getString("name");
-                String scriptContent = scriptObj.getString("content");
-                scripts.put(name, scriptContent);
+            encryptScripts.clear();
+            decryptScripts.clear();
+
+            // 加载加密脚本
+            JSONArray encryptScriptsArray = config.optJSONArray("encrypt_scripts");
+            if (encryptScriptsArray != null) {
+                for (int i = 0; i < encryptScriptsArray.length(); i++) {
+                    JSONObject scriptObj = encryptScriptsArray.getJSONObject(i);
+                    String name = scriptObj.getString("name");
+                    String scriptContent = scriptObj.getString("content");
+                    encryptScripts.put(name, scriptContent);
+                }
             }
-            callbacks.printOutput("Loaded " + scripts.size() + " scripts from config");
+
+            // 加载解密脚本
+            JSONArray decryptScriptsArray = config.optJSONArray("decrypt_scripts");
+            if (decryptScriptsArray != null) {
+                for (int i = 0; i < decryptScriptsArray.length(); i++) {
+                    JSONObject scriptObj = decryptScriptsArray.getJSONObject(i);
+                    String name = scriptObj.getString("name");
+                    String scriptContent = scriptObj.getString("content");
+                    decryptScripts.put(name, scriptContent);
+                }
+            }
+
+            callbacks.printOutput("Loaded " + encryptScripts.size() + " encrypt scripts and " +
+                    decryptScripts.size() + " decrypt scripts from config");
         } catch (IOException e) {
             callbacks.printError("Error reading config file: " + e.getMessage());
         } catch (Exception e) {
@@ -107,7 +135,8 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
     public BlockingQueue<String> getMessages() { return messages; }
     public ConcurrentHashMap<String, String> getResults() { return results; }
     public ConcurrentHashMap<String, CountDownLatch> getResultEvents() { return resultEvents; }
-    public Map<String, String> getScripts() { return scripts; }
+    public Map<String, String> getEncryptScripts() { return encryptScripts; }
+    public Map<String, String> getDecryptScripts() { return decryptScripts; }
     public boolean isRunning() { return isRunning; }
     public void setRunning(boolean running) {
         this.isRunning = running;

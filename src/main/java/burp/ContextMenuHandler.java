@@ -18,7 +18,7 @@ public class ContextMenuHandler {
             List<JMenuItem> menu = new ArrayList<>();
             JMenu scriptMenu = new JMenu("Apply SSE Script");
 
-            for (String scriptName : plugin.getScripts().keySet()) {
+            for (String scriptName : plugin.getEncryptScripts().keySet()) {
                 JMenuItem item = new JMenuItem(scriptName);
                 item.addActionListener(e -> applyScript(invocation, scriptName));
                 scriptMenu.add(item);

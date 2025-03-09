@@ -61,7 +61,7 @@ public class HttpMessageProcessor {
 
                 // 递归解析嵌套内容
                 String resolvedInput = resolveNestedTags(nestedInput);
-                String script = plugin.getScripts().get(scriptName);
+                String script = plugin.getEncryptScripts().get(scriptName);
 
                 String output;
                 if (script != null) {
