@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.*;
 
-public class BurpSSEPlugin implements IBurpExtender, IContextMenuFactory, IHttpListener {
+public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IContextMenuFactory, IHttpListener {
     private IBurpExtenderCallbacks callbacks;
     private IExtensionHelpers helpers;
     private HttpServerManager serverManager;
@@ -31,8 +31,10 @@ public class BurpSSEPlugin implements IBurpExtender, IContextMenuFactory, IHttpL
         this.callbacks = callbacks;
         this.helpers = callbacks.getHelpers();
         callbacks.setExtensionName("SSE Server Plugin");
+        callbacks.registerExtensionStateListener(this);
         callbacks.registerContextMenuFactory(this);
         callbacks.registerHttpListener(this);
+
 
         configFile = new File(callbacks.getExtensionFilename()).getParentFile();
         configFile = new File(configFile, CONFIG_FILE);
@@ -124,5 +126,10 @@ public class BurpSSEPlugin implements IBurpExtender, IContextMenuFactory, IHttpL
 
     public String processWithSSE(String input, String script) throws Exception {
         return new SSEProcessor(this).processWithSSE(input, script);
+    }
+
+    @Override
+    public void extensionUnloaded() {
+        this.serverManager.stopServer();
     }
 }
