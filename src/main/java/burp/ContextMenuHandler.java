@@ -58,8 +58,9 @@ public class ContextMenuHandler {
     private void showAddDecryptRuleDialog(IContextMenuInvocation invocation) {
         IHttpRequestResponse message = invocation.getSelectedMessages()[0];
         int[] bounds = invocation.getSelectionBounds();
-        byte[] content = (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST ||
-                invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST) ?
+        boolean isReq = (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST ||
+                invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_VIEWER_REQUEST);
+        byte[] content =  isReq ?
                 message.getRequest() : message.getResponse();
         String selectedText = "";
         if (bounds != null && bounds[0] >= 0 && bounds[1] <= content.length && bounds[0] < bounds[1]) {
@@ -136,7 +137,6 @@ public class ContextMenuHandler {
             if (start >= 0 && end <= content.length && start < end) {
                 String newSelectedText = contentString.substring(start, end);
                 try {
-                    this.plugin.getCallbacks().printOutput("select length:"+newSelectedText.length()+"\nselect string:"+newSelectedText);
                     String newRegex = RegexUtils.generateRegex(contentString, newSelectedText, start);
                     regexField.setText(newRegex);
                 } catch (Exception ex) {
@@ -194,7 +194,7 @@ public class ContextMenuHandler {
             if (selectedScript != null && !selectedScript.equals("No decrypt scripts available")) {
                 String regex = regexField.getText().trim();
                 if (!regex.isEmpty()) {
-                    plugin.getGuiManager().addDecryptRule(urlPath, regex, selectedScript);
+                    plugin.getGuiManager().addDecryptRule(urlPath, regex, isReq, selectedScript);
                     plugin.getCallbacks().printOutput("Added decrypt rule: " + urlPath + " | " + regex + " | " + selectedScript);
                     dialog.dispose();
                 }

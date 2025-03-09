@@ -95,11 +95,11 @@ public class GUIManager {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
         // 创建表格
-        String[] columnNames = {"URL Path", "Regex Pattern", "Decrypt Script"};
+        String[] columnNames = {"URL Path", "Regex Pattern", "Req/Res","Decrypt Script"};
         Object[][] data = {}; // 初始空数据
         decryptTable = new JTable(new DefaultTableModel(data, columnNames));
         JScrollPane tableScrollPane = new JScrollPane(decryptTable);
-        tableScrollPane.setPreferredSize(new Dimension(400, 100));
+        tableScrollPane.setPreferredSize(new Dimension(400, 200));
 
         // 控制面板
         JPanel scriptControlPanel = new JPanel();
@@ -214,9 +214,13 @@ public class GUIManager {
         stopButton.setEnabled(running);
     }
 
-    public void addDecryptRule(String urlPath, String regex, String selectedScript) {
+    public void addDecryptRule(String urlPath, String regex, Boolean reqOrRes, String selectedScript) {
         DefaultTableModel model = (DefaultTableModel) decryptTable.getModel();
-        model.addRow(new Object[]{urlPath, regex, selectedScript});
+        model.addRow(new Object[]{urlPath, regex, reqOrRes?"request":"response", selectedScript});
+    }
+
+    public JTable getDecryptTable() {
+        return decryptTable;
     }
 
     class BurpTab implements ITab {
