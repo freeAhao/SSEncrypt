@@ -40,7 +40,13 @@ public class MessageEditorTab implements IMessageEditorTab {
 
     @Override
     public boolean isEnabled(byte[] content, boolean isRequest) {
-        return checkMatchingRule(content, isRequest);
+//        When the isRequest variable is false,
+//        the corresponding request for the response cannot be obtained,
+//        so it is not possible to determine information such as the URL.
+//        Directly return true.
+
+//        return checkMatchingRule(content, isRequest);
+        return true;
     }
 
     @Override
