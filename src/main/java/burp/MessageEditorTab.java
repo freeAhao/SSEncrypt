@@ -14,8 +14,8 @@ public class MessageEditorTab implements IMessageEditorTab {
     private boolean isModified = false;
     private byte[] currentContent;
     private boolean isRequest;
-    private String lastDecryptedMessage; // Cache last decrypted result to avoid redundant decryption
-    private String tittle = "Decrypted Message";
+//    private String lastDecryptedMessage; // Cache last decrypted result to avoid redundant decryption
+    private String tittle = "Decrypted";
 
     public MessageEditorTab(BurpSSEPlugin plugin, IMessageEditorController controller, boolean editable) {
         this.plugin = plugin;
@@ -32,9 +32,9 @@ public class MessageEditorTab implements IMessageEditorTab {
     @Override
     public Component getUiComponent() {
         // Return the UI component of the Burp message editor
-        if (currentContent != null && lastDecryptedMessage != null) {
-            setTextSafely(lastDecryptedMessage);
-        }
+//        if (currentContent != null && lastDecryptedMessage != null) {
+//            setTextSafely(lastDecryptedMessage);
+//        }
         return messageEditor.getComponent();
     }
 
@@ -53,7 +53,14 @@ public class MessageEditorTab implements IMessageEditorTab {
     public void setMessage(byte[] content, boolean isRequest) {
         this.currentContent = content;
         this.isRequest = isRequest;
-        loadDecryptedData();
+
+        boolean match = checkMatchingRule(content, isRequest);
+        if (match){
+            loadDecryptedData();
+        }else{
+            this.messageEditor.setMessage("No Match Rule".getBytes(), isRequest);
+        }
+
     }
 
     @Override
@@ -94,7 +101,6 @@ public class MessageEditorTab implements IMessageEditorTab {
                         Pattern pattern = Pattern.compile(regex);
                         Matcher matcher = pattern.matcher(messageContent);
                         if (matcher.find()) {
-                            this.tittle = "rule " + i;
                             return true;
                         }
                     } catch (Exception e) {
@@ -155,7 +161,7 @@ public class MessageEditorTab implements IMessageEditorTab {
                                     usedRules.add(i);
                                     currentResult = decryptData(currentResult, matcher, pattern, scriptName);
                                     matchedRule = true;
-                                    lastDecryptedMessage = currentResult;
+//                                    lastDecryptedMessage = currentResult;
                                     break;
                                 }
                             }
