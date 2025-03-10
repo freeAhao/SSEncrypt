@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class HttpHandlers {
     static class SSEHandler implements HttpHandler {
@@ -87,12 +88,22 @@ public class HttpHandlers {
                 JSONObject json = new JSONObject(requestBody);
                 String taskId = UUID.randomUUID().toString();
                 json.put("id", taskId);
+                
+                if (!json.has("script") && json.has("funcType") && json.has("funcName")) {
+                    String script = "this.result(msg, msg.input);";
+                    if (json.get("funcType").equals("enc") && plugin.encryptScripts.keySet().contains(json.getString("funcName"))){
+                        script = plugin.encryptScripts.get(json.getString("funcName"));
+                    } else if (json.get("funcType").equals("dec") && plugin.decryptScripts.keySet().contains(json.getString("funcName"))) {
+                        script = plugin.decryptScripts.get(json.getString("funcName"));
+                    }
+                    json.put("script", script);
+                }
 
                 CountDownLatch latch = new CountDownLatch(1);
                 plugin.getResultEvents().put(taskId, latch);
                 plugin.getMessages().put(json.toString());
 
-                boolean completed = latch.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                boolean completed = latch.await(10, TimeUnit.SECONDS);
                 String output = completed ? plugin.getResults().remove(taskId) : "Timeout";
                 json.put("output", output != null ? output : "Timeout");
                 json.put("error", !completed);

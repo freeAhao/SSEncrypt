@@ -140,7 +140,7 @@ public class MessageEditorTab implements IMessageEditorTab {
                             continue;
                         }
 
-                        if (url.contains(urlPath)) {
+                        if (requestInfo.getUrl().getPath().equals(urlPath)) {
                             if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
                                 Pattern pattern = Pattern.compile(regex);
                                 Matcher matcher = pattern.matcher(currentResult);
