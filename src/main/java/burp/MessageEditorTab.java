@@ -15,17 +15,18 @@ public class MessageEditorTab implements IMessageEditorTab {
     private byte[] currentContent;
     private boolean isRequest;
     private String lastDecryptedMessage; // Cache last decrypted result to avoid redundant decryption
+    private String tittle = "Decrypted Message";
 
-    public MessageEditorTab(BurpSSEPlugin plugin, IMessageEditorController controller) {
+    public MessageEditorTab(BurpSSEPlugin plugin, IMessageEditorController controller, boolean editable) {
         this.plugin = plugin;
         this.controller = controller;
         // Initialize the Burp-provided message editor
-        this.messageEditor = plugin.getCallbacks().createMessageEditor(controller, true); // false = read-only
+        this.messageEditor = plugin.getCallbacks().createMessageEditor(controller, editable); // false = read-only
     }
 
     @Override
     public String getTabCaption() {
-        return "Decrypted Message";
+        return tittle;
     }
 
     @Override
@@ -81,13 +82,13 @@ public class MessageEditorTab implements IMessageEditorTab {
             String urlPath = (String) decryptTable.getValueAt(i, 0);
             String regex = (String) decryptTable.getValueAt(i, 1);
             String type = (String) decryptTable.getValueAt(i, 2);
-
             if (requestInfo.getUrl().getPath().equals(urlPath)) {
                 if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
                     try {
                         Pattern pattern = Pattern.compile(regex);
                         Matcher matcher = pattern.matcher(messageContent);
                         if (matcher.find()) {
+                            this.tittle = "rule " + i;
                             return true;
                         }
                     } catch (Exception e) {
