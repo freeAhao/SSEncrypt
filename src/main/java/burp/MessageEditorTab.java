@@ -20,7 +20,7 @@ public class MessageEditorTab implements IMessageEditorTab {
         this.plugin = plugin;
         this.controller = controller;
         // Initialize the Burp-provided message editor
-        this.messageEditor = plugin.getCallbacks().createMessageEditor(null, false); // false = read-only
+        this.messageEditor = plugin.getCallbacks().createMessageEditor(controller, false); // false = read-only
     }
 
     @Override
