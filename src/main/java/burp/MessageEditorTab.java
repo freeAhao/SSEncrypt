@@ -106,57 +106,63 @@ public class MessageEditorTab implements IMessageEditorTab {
             return;
         }
 
-        IHttpService httpService = controller.getHttpService();
-        byte[] request = controller.getRequest();
-        if (request == null) {
-            setTextSafely("No request data available to determine URL.");
-            return;
-        }
+        // 立即显示原始消息
+        String originalMessage = new String(currentContent, StandardCharsets.UTF_8);
+        setTextSafely(originalMessage);
 
-        IRequestInfo requestInfo = plugin.getHelpers().analyzeRequest(httpService, request);
-        String url = requestInfo.getUrl().toString();
-        JTable decryptTable = plugin.getGuiManager().getDecryptTable();
-        String messageContent = new String(currentContent, StandardCharsets.UTF_8);
-        String currentResult = messageContent;
-        boolean matchedRule;
-        ArrayList<Integer> usedRules = new ArrayList<>();
-
-        // Recursive decryption loop
-        do {
-            matchedRule = false;
-            for (int i = 0; i < decryptTable.getRowCount(); i++) {
-                Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
-                if (enabled != null && !enabled) {continue;}
-                String urlPath = (String) decryptTable.getValueAt(i, 0);
-                String regex = (String) decryptTable.getValueAt(i, 1);
-                String type = (String) decryptTable.getValueAt(i, 2);
-                String scriptName = (String) decryptTable.getValueAt(i, 3);
-                if (usedRules.contains(i)) {
-                    continue;
+        // 异步处理解密
+        new Thread(() -> {
+            try {
+                IHttpService httpService = controller.getHttpService();
+                byte[] request = controller.getRequest();
+                if (request == null) {
+                    setTextSafely("No request data available to determine URL.");
+                    return;
                 }
 
-                if (url.contains(urlPath)) {
-                    if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
-                        try {
-                            Pattern pattern = Pattern.compile(regex);
-                            Matcher matcher = pattern.matcher(currentResult);
-                            if (matcher.find()) {
-                                usedRules.add(i);
-                                currentResult = decryptData(currentResult, matcher, pattern, scriptName);
-                                matchedRule = true;
-                                lastDecryptedMessage = currentResult; // Update cached result
-                                break; // Break to start new iteration with updated content
+                IRequestInfo requestInfo = plugin.getHelpers().analyzeRequest(httpService, request);
+                String url = requestInfo.getUrl().toString();
+                JTable decryptTable = plugin.getGuiManager().getDecryptTable();
+                String currentResult = originalMessage;
+                boolean matchedRule;
+                ArrayList<Integer> usedRules = new ArrayList<>();
+
+                // Recursive decryption loop
+                do {
+                    matchedRule = false;
+                    for (int i = 0; i < decryptTable.getRowCount(); i++) {
+                        Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
+                        if (enabled != null && !enabled) {continue;}
+                        String urlPath = (String) decryptTable.getValueAt(i, 0);
+                        String regex = (String) decryptTable.getValueAt(i, 1);
+                        String type = (String) decryptTable.getValueAt(i, 2);
+                        String scriptName = (String) decryptTable.getValueAt(i, 3);
+                        if (usedRules.contains(i)) {
+                            continue;
+                        }
+
+                        if (url.contains(urlPath)) {
+                            if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
+                                Pattern pattern = Pattern.compile(regex);
+                                Matcher matcher = pattern.matcher(currentResult);
+                                if (matcher.find()) {
+                                    usedRules.add(i);
+                                    currentResult = decryptData(currentResult, matcher, pattern, scriptName);
+                                    matchedRule = true;
+                                    lastDecryptedMessage = currentResult;
+                                    break;
+                                }
                             }
-                        } catch (Exception e) {
-                            setTextSafely("Error decrypting data: " + e.getMessage());
-                            return;
                         }
                     }
-                }
-            }
-        } while (matchedRule); // Continue until no more rules match
+                } while (matchedRule);
 
-        setTextSafely(currentResult);
+                // 解密完成后更新显示
+                setTextSafely(currentResult);
+            } catch (Exception e) {
+                setTextSafely("Error decrypting data: " + e.getMessage());
+            }
+        }).start();
     }
 
     private String decryptData(String originalMessage, Matcher matcher, Pattern pattern, String scriptName) throws Exception {
