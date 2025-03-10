@@ -6,22 +6,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.fife.ui.rtextarea.RTextScrollPane;
 
 public class MessageEditorTab implements IMessageEditorTab {
     private final BurpSSEPlugin plugin;
     private final IMessageEditorController controller;
-    private RSyntaxTextArea textEditor;
+    private IMessageEditor messageEditor; // Replace RSyntaxTextArea with Burp's IMessageEditor
     private boolean isModified = false;
     private byte[] currentContent;
     private boolean isRequest;
-    private String lastDecryptedMessage; // 缓存上次的解密结果，避免重复解密
+    private String lastDecryptedMessage; // Cache last decrypted result to avoid redundant decryption
 
     public MessageEditorTab(BurpSSEPlugin plugin, IMessageEditorController controller) {
         this.plugin = plugin;
         this.controller = controller;
+        // Initialize the Burp-provided message editor
+        this.messageEditor = plugin.getCallbacks().createMessageEditor(null, false); // false = read-only
     }
 
     @Override
@@ -31,18 +30,11 @@ public class MessageEditorTab implements IMessageEditorTab {
 
     @Override
     public Component getUiComponent() {
-        if (textEditor == null) {
-            textEditor = new RSyntaxTextArea(20, 60);
-            textEditor.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-            textEditor.setEditable(false);
-            textEditor.setLineWrap(true);
-        }
-        RTextScrollPane scrollPane = new RTextScrollPane(textEditor);
-        // 仅在 textEditor 未设置内容时加载
-        if (currentContent != null && textEditor.getText().isEmpty() && lastDecryptedMessage != null) {
+        // Return the UI component of the Burp message editor
+        if (currentContent != null && lastDecryptedMessage != null) {
             setTextSafely(lastDecryptedMessage);
         }
-        return scrollPane;
+        return messageEditor.getComponent();
     }
 
     @Override
@@ -59,7 +51,7 @@ public class MessageEditorTab implements IMessageEditorTab {
 
     @Override
     public byte[] getMessage() {
-        return textEditor != null ? textEditor.getText().getBytes() : new byte[0];
+        return messageEditor != null ? messageEditor.getMessage() : new byte[0];
     }
 
     @Override
@@ -69,7 +61,7 @@ public class MessageEditorTab implements IMessageEditorTab {
 
     @Override
     public byte[] getSelectedData() {
-        return textEditor != null && textEditor.getSelectedText() != null ? textEditor.getSelectedText().getBytes() : null;
+        return messageEditor != null ? messageEditor.getSelectedData() : null;
     }
 
     private boolean checkMatchingRule(byte[] content, boolean isRequest) {
@@ -125,7 +117,7 @@ public class MessageEditorTab implements IMessageEditorTab {
         String messageContent = new String(currentContent, StandardCharsets.UTF_8);
         String currentResult = messageContent;
         boolean matchedRule;
-        ArrayList<Integer> usedRules = new ArrayList<Integer>();
+        ArrayList<Integer> usedRules = new ArrayList<>();
 
         // Recursive decryption loop
         do {
@@ -192,14 +184,12 @@ public class MessageEditorTab implements IMessageEditorTab {
     }
 
     private void setTextSafely(String text) {
-        if (textEditor != null) {
+        if (messageEditor != null) {
             SwingUtilities.invokeLater(() -> {
-                textEditor.setText(text);
-                textEditor.revalidate();
-                textEditor.repaint();
+                messageEditor.setMessage(text.getBytes(StandardCharsets.UTF_8), isRequest);
             });
         } else {
-            plugin.getCallbacks().printOutput("Text editor is null, cannot set text: " + text);
+            plugin.getCallbacks().printOutput("Message editor is null, cannot set text: " + text);
         }
     }
 }
