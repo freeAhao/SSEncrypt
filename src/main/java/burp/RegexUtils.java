@@ -30,6 +30,10 @@ public class RegexUtils {
             before = escapeRegex(before);
             after = escapeRegex(after);
 
+            if (after.isEmpty()) {
+                after = "$";
+            }
+
             // 生成正则表达式
             regex = before + "(.*?)" + after;
 

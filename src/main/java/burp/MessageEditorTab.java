@@ -20,7 +20,7 @@ public class MessageEditorTab implements IMessageEditorTab {
         this.plugin = plugin;
         this.controller = controller;
         // Initialize the Burp-provided message editor
-        this.messageEditor = plugin.getCallbacks().createMessageEditor(controller, false); // false = read-only
+        this.messageEditor = plugin.getCallbacks().createMessageEditor(controller, true); // false = read-only
     }
 
     @Override
@@ -72,7 +72,6 @@ public class MessageEditorTab implements IMessageEditorTab {
         }
 
         IRequestInfo requestInfo = plugin.getHelpers().analyzeRequest(httpService, request);
-        String url = requestInfo.getUrl().toString();
         JTable decryptTable = plugin.getGuiManager().getDecryptTable();
         String messageContent = new String(content, StandardCharsets.UTF_8);
 
