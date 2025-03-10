@@ -77,6 +77,8 @@ public class MessageEditorTab implements IMessageEditorTab {
         String messageContent = new String(content, StandardCharsets.UTF_8);
 
         for (int i = 0; i < decryptTable.getRowCount(); i++) {
+            Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
+            if (enabled != null && !enabled) {continue;}
             String urlPath = (String) decryptTable.getValueAt(i, 0);
             String regex = (String) decryptTable.getValueAt(i, 1);
             String type = (String) decryptTable.getValueAt(i, 2);
@@ -123,6 +125,8 @@ public class MessageEditorTab implements IMessageEditorTab {
         do {
             matchedRule = false;
             for (int i = 0; i < decryptTable.getRowCount(); i++) {
+                Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
+                if (enabled != null && !enabled) {continue;}
                 String urlPath = (String) decryptTable.getValueAt(i, 0);
                 String regex = (String) decryptTable.getValueAt(i, 1);
                 String type = (String) decryptTable.getValueAt(i, 2);
