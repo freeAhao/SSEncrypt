@@ -169,6 +169,6 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
 
     @Override
     public IMessageEditorTab createNewInstance(IMessageEditorController controller, boolean editable) {
-        return new MessageEditorTab(this, controller);
+        return new MessageEditorTab(this, controller, editable);
     }
 }
