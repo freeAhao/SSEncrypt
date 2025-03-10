@@ -1,7 +1,5 @@
 package burp;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-
 import javax.swing.*;
 
 public class ScriptHandler {
@@ -11,7 +9,7 @@ public class ScriptHandler {
     private final DefaultListModel<String> decryptScriptListModel;
     private final JList<String> decryptScriptList;
     private final JTextField scriptNameField;
-    private final RSyntaxTextArea scriptContentArea;
+    private final ITextEditor scriptContentArea;
     private final JButton addScript;
     private boolean isEncryptListSelected = true; // 跟踪当前选中的是哪个列表
 
@@ -21,7 +19,7 @@ public class ScriptHandler {
                          DefaultListModel<String> decryptScriptListModel,
                          JList<String> decryptScriptList,
                          JTextField scriptNameField,
-                         RSyntaxTextArea scriptContentArea,
+                         ITextEditor scriptContentArea,
                          JButton addScript) {
         this.plugin = plugin;
         this.encryptScriptListModel = encryptScriptListModel;
@@ -37,7 +35,7 @@ public class ScriptHandler {
 
     public void addScript() {
         String name = scriptNameField.getText().trim();
-        String content = scriptContentArea.getText().trim();
+        String content = new String(scriptContentArea.getText());
         if (!name.isEmpty() && !content.isEmpty()) {
             if (isEncryptListSelected) {
                 plugin.getEncryptScripts().put(name, content);
@@ -74,7 +72,7 @@ public class ScriptHandler {
             }
         }
         scriptNameField.setText("");
-        scriptContentArea.setText("");
+        scriptContentArea.setText("".getBytes());
         plugin.saveScriptsToConfig();
     }
 
@@ -83,7 +81,7 @@ public class ScriptHandler {
         if (selected != null) {
             isEncryptListSelected = true;
             scriptNameField.setText(selected);
-            scriptContentArea.setText(plugin.getEncryptScripts().get(selected));
+            scriptContentArea.setText(plugin.getEncryptScripts().get(selected).getBytes());
             addScript.setText(encryptScriptListModel.contains(selected) ? "Update" : "Add");
         }
     }
@@ -93,7 +91,7 @@ public class ScriptHandler {
         if (selected != null) {
             isEncryptListSelected = false;
             scriptNameField.setText(selected);
-            scriptContentArea.setText(plugin.getDecryptScripts().get(selected));
+            scriptContentArea.setText(plugin.getDecryptScripts().get(selected).getBytes());
             addScript.setText(decryptScriptListModel.contains(selected) ? "Update" : "Add");
         }
     }
@@ -120,7 +118,7 @@ public class ScriptHandler {
         if (isEncryptListSelected != b){
             isEncryptListSelected = b;
             this.scriptNameField.setText("");
-            this.scriptContentArea.setText("");
+            this.scriptContentArea.setText("".getBytes());
             this.addScript.setText("Add");
         }
 

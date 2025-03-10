@@ -1,12 +1,9 @@
 package burp;
 
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.fife.ui.rtextarea.RTextScrollPane;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.JTextComponent;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -14,6 +11,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class GUIManager {
     private final BurpSSEPlugin plugin;
@@ -25,7 +23,7 @@ public class GUIManager {
     private DefaultListModel<String> encryptScriptListModel;
     private DefaultListModel<String> decryptScriptListModel;
     private JTextField scriptNameField;
-    private RSyntaxTextArea scriptContentArea;
+    private ITextEditor scriptContentArea; // Replaced RSyntaxTextArea with ITextEditor
     private final HttpServerManager serverManager;
     private JTable decryptTable;
 
@@ -84,22 +82,45 @@ public class GUIManager {
 
         scriptNameField = new JTextField(20);
 
-        // 初始化 RSyntaxTextArea
-        JTextComponent.removeKeymap("RTextAreaKeymap");
-        scriptContentArea = new RSyntaxTextArea(10, 30);
-        scriptContentArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-        scriptContentArea.setCodeFoldingEnabled(true);
+        // 初始化 Burp 的 ITextEditor
+        scriptContentArea = plugin.getCallbacks().createTextEditor();
         scriptContentArea.setEditable(true);
 
-        RTextScrollPane scrollPane = new RTextScrollPane(scriptContentArea);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-
-        // 创建表格
-        String[] columnNames = {"URL Path", "Regex Pattern", "Req/Res","Decrypt Script"};
-        Object[][] data = {}; // 初始空数据
-        decryptTable = new JTable(new DefaultTableModel(data, columnNames));
+        // 创建表格 - 5列
+        String[] columnNames = {"URL Path", "Regex Pattern", "Req/Res", "Decrypt Script", "Enabled"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 4) return Boolean.class; // Enabled column as Boolean for checkbox
+                return String.class;
+            }
+        };
+        decryptTable = new JTable(tableModel);
         JScrollPane tableScrollPane = new JScrollPane(decryptTable);
         tableScrollPane.setPreferredSize(new Dimension(400, 200));
+
+        // 配置第2列 (Req/Res) 下拉框
+        JComboBox<String> reqResCombo = new JComboBox<>(new String[]{"request", "response"});
+        decryptTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(reqResCombo));
+
+        // 配置第3列 (Decrypt Script) 下拉框
+        JComboBox<String> scriptCombo = new JComboBox<>();
+        Map<String, String> decryptScripts = plugin.getDecryptScripts();
+        if (decryptScripts != null) {
+            decryptScripts.keySet().forEach(scriptCombo::addItem);
+        }
+        decryptTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(scriptCombo));
+
+        // 配置第4列 (Enabled) 复选框 - 默认启用
+        decryptTable.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JCheckBox checkBox = new JCheckBox();
+                checkBox.setSelected(value != null && (Boolean) value);
+                checkBox.setHorizontalAlignment(JCheckBox.CENTER);
+                return checkBox;
+            }
+        });
 
         // 控制面板
         JPanel scriptControlPanel = new JPanel();
@@ -130,23 +151,19 @@ public class GUIManager {
         encryptScriptList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                scriptHandler.setEncryptListSelected(true); // 点击时设置为true
+                scriptHandler.setEncryptListSelected(true);
             }
         });
-
         decryptScriptList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                scriptHandler.setEncryptListSelected(false); // 点击时设置为false
+                scriptHandler.setEncryptListSelected(false);
             }
         });
         addScript.addActionListener(e -> scriptHandler.addScript());
         deleteScript.addActionListener(e -> scriptHandler.deleteScript());
         encryptScriptList.addListSelectionListener(e -> scriptHandler.handleEncryptScriptSelection());
-
-        // 处理解密脚本
         decryptScriptList.addListSelectionListener(e -> scriptHandler.handleDecryptScriptSelection());
-
         downloadScriptButton.addActionListener(e -> downloadScript());
 
         // 布局设置
@@ -163,21 +180,19 @@ public class GUIManager {
         listsPanel.add(decryptPanel);
 
         scriptPanel.add(listsPanel, BorderLayout.WEST);
-        scriptPanel.add(scrollPane, BorderLayout.CENTER);
+        scriptPanel.add(scriptContentArea.getComponent(), BorderLayout.CENTER); // Use ITextEditor component
         scriptPanel.add(scriptControlPanel, BorderLayout.NORTH);
-        scriptPanel.add(tableScrollPane, BorderLayout.SOUTH); // 添加表格在底部
+        scriptPanel.add(tableScrollPane, BorderLayout.SOUTH);
         panel.add(scriptPanel, BorderLayout.CENTER);
     }
+
     private String readScriptContent() {
         String scriptContent;
         try {
-            // 从资源目录读取 tampermonkey.js
             InputStream inputStream = getClass().getResourceAsStream("/tampermonkey.js");
             if (inputStream == null) {
                 throw new FileNotFoundException("Cannot find tampermonkey.js in resources");
             }
-
-            // 将 InputStream 转换为字符串
             scriptContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
             inputStream.close();
         } catch (IOException e) {
@@ -185,10 +200,11 @@ public class GUIManager {
                     "Error reading tampermonkey.js: " + e.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
-            scriptContent = ""; // 设置默认空值以防后续操作失败
+            scriptContent = "";
         }
         return scriptContent;
     }
+
     private void downloadScript() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File("script.js"));
@@ -216,7 +232,7 @@ public class GUIManager {
 
     public void addDecryptRule(String urlPath, String regex, Boolean reqOrRes, String selectedScript) {
         DefaultTableModel model = (DefaultTableModel) decryptTable.getModel();
-        model.addRow(new Object[]{urlPath, regex, reqOrRes?"request":"response", selectedScript});
+        model.addRow(new Object[]{urlPath, regex, reqOrRes ? "request" : "response", selectedScript, true}); // Default enabled
     }
 
     public JTable getDecryptTable() {

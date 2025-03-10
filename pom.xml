@@ -30,11 +30,6 @@
       <artifactId>json</artifactId>
       <version>20230227</version>
     </dependency>
-      <dependency>
-          <groupId>com.fifesoft</groupId>
-          <artifactId>rsyntaxtextarea</artifactId>
-          <version>3.5.4</version>
-      </dependency>
   </dependencies>
   <build>
     <plugins>
