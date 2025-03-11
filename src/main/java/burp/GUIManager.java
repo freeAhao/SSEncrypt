@@ -186,10 +186,10 @@ public class GUIManager {
         panel.add(scriptPanel, BorderLayout.CENTER);
     }
 
-    private String readScriptContent() {
+    private String readScriptContent(String filename) {
         String scriptContent;
         try {
-            InputStream inputStream = getClass().getResourceAsStream("/tampermonkey.js");
+            InputStream inputStream = getClass().getResourceAsStream("/"+filename);
             if (inputStream == null) {
                 throw new FileNotFoundException("Cannot find tampermonkey.js in resources");
             }
@@ -212,7 +212,7 @@ public class GUIManager {
         if (option == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
             try (FileWriter writer = new FileWriter(file)) {
-                writer.write(readScriptContent());
+                writer.write(readScriptContent("tampermonkey.js"));
                 JOptionPane.showMessageDialog(panel, "Script saved successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(panel, "Error saving script: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
