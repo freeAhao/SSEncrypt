@@ -1,8 +1,7 @@
 package burp;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import javax.swing.JMenuItem;
+import javax.swing.*;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -89,14 +88,29 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
         }
     }
 
-    private void loadScriptsFromConfig() {
-        if (!configFile.exists()) {
-            callbacks.printOutput("No config file found at " + configFile.getAbsolutePath());
-            return;
-        }
-
+    private String readScriptContent(String filename) {
+        String scriptContent = "";
         try {
-            String content = new String(Files.readAllBytes(configFile.toPath()));
+            InputStream inputStream = getClass().getResourceAsStream("/"+filename);
+            if (inputStream == null) {
+                throw new FileNotFoundException("Cannot find "+filename+" in resources");
+            }
+            scriptContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            inputStream.close();
+        } catch (IOException e) {
+            this.callbacks.printError("Error reading script: " + e.getMessage());
+        }
+        return scriptContent;
+    }
+
+    private void loadScriptsFromConfig() {
+        try {
+            String content = null;
+            if (!configFile.exists()) {
+                content = readScriptContent(CONFIG_FILE);
+            }else{
+                content = new String(Files.readAllBytes(configFile.toPath()));
+            }
             JSONObject config = new JSONObject(content);
 
             encryptScripts.clear();
