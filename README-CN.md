@@ -28,16 +28,18 @@
 1. **编译插件**：
    - 克隆此仓库：
      ```bash
-     git clone https://github.com/yourusername/burp-sse-plugin.git
+     git clone https://github.com/freeAhao/burp-sse-plugin.git
      ```
-   - 在您喜欢的 Java IDE（例如 IntelliJ IDEA、Eclipse）中打开项目。
-   - 确保将 Burp Suite Extender API（`burp.jar`）添加到项目的类路径中。
-   - 构建项目以生成 `BurpSSEPlugin.jar`。
+   - 编译
+     ```bash
+     mvn compile package
+     ```
+   - 编译成功将看到`target/burp-sse-plugin-1.0-SNAPSHOT.jar`
 
 2. **加载到 Burp Suite**：
    - 打开 Burp Suite。
    - 导航到 **Extender** 选项卡 > **Extensions** > **Add**。
-   - 将扩展类型设置为 **Java**，然后选择编译好的 `BurpSSEPlugin.jar`。
+   - 将扩展类型设置为 **Java**，然后选择编译好的 `burp-sse-plugin-1.0-SNAPSHOT.jar`。
    - 确认插件加载成功（检查 Burp 中是否出现 "SSE Server" 选项卡）。
 
 3. **配置文件**（可选）：
