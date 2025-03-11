@@ -242,7 +242,7 @@ public class GUIManager {
     class BurpTab implements ITab {
         @Override
         public String getTabCaption() {
-            return "SSE Server";
+            return "SSEncrypt";
         }
 
         @Override

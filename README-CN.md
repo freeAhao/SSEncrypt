@@ -1,6 +1,6 @@
-# Burp SSE 插件
+# SSEncrypt 插件
 
-**Burp SSE 插件** 是一个 Burp Suite 扩展，旨在通过集成 Server-Sent Events (SSE) 和自定义加密/解密脚本增强 HTTP 请求和响应的处理能力。该插件为实时处理 HTTP 消息提供了灵活的框架，使安全研究人员和渗透测试人员能够自动化加密/解密流程、管理脚本并在 Burp Suite 中可视化解密后的数据。
+**SSEncrypt 插件** 是一个 Burp Suite 扩展，旨在通过集成 Server-Sent Events (SSE) 和自定义加密/解密脚本增强 HTTP 请求和响应的处理能力。该插件为实时处理 HTTP 消息提供了灵活的框架，使安全研究人员和渗透测试人员能够自动化加密/解密流程、管理脚本并在 Burp Suite 中可视化解密后的数据。
 
 该插件内置了一个 HTTP 服务器来处理 SSE 通信，支持动态脚本管理，并提供了一个用户友好的图形界面用于配置和管理规则。
 
@@ -8,11 +8,11 @@
 
 - **内置 HTTP 服务器**：在 Burp Suite 中运行一个 SSE 服务器，以动态处理 HTTP 消息。
 - **TamperMonkey 脚本导出**：支持下载预配置的 TamperMonkey 脚本用于连接SSE服务器。
-- **自定义加密/解密脚本**：允许用户定义和管理基于 JavaScript 的加密和解密脚本，存储在 JSON 配置文件（`sse_scripts.json`）中。
+- **自定义加密/解密脚本**：允许用户定义和管理基于 JavaScript 的加密和解密脚本，存储在 JSON 配置文件（`SSEncrypt.json`）中。
 - **上下文菜单集成**：通过右键菜单将加密脚本应用于选中的 HTTP 请求文本，并添加解密规则。
 - **消息编辑器选项卡**：在专用选项卡中显示根据预定义规则解密的 HTTP 请求/响应内容。
 - **动态规则解密**：自动解密匹配用户定义的 URL 路径和正则表达式的 HTTP 消息。
-- **图形界面管理**：通过 Burp Suite 的 "SSE Server" 选项卡管理脚本、服务器设置和解密规则。
+- **图形界面管理**：通过 Burp Suite 的 "SSEncrypt" 选项卡管理脚本、服务器设置和解密规则。
 - **实时处理**：在 Repeater 和 Intruder 工具中处理 HTTP 请求中的嵌套加密标签（`[[scriptName:content]]`）。
 
 ## 要求
@@ -28,28 +28,28 @@
 1. **编译插件**：
    - 克隆此仓库：
      ```bash
-     git clone https://github.com/freeAhao/burp-sse-plugin.git
+     git clone https://github.com/freeAhao/SSEncrypt.git
      ```
    - 编译
      ```bash
      mvn compile package
      ```
-   - 编译成功将看到`target/burp-sse-plugin-1.0-SNAPSHOT.jar`
+   - 编译成功将看到`target/SSEncrypt-1.0-SNAPSHOT.jar`
 
 2. **加载到 Burp Suite**：
    - 打开 Burp Suite。
    - 导航到 **Extender** 选项卡 > **Extensions** > **Add**。
    - 将扩展类型设置为 **Java**，然后选择编译好的 `burp-sse-plugin-1.0-SNAPSHOT.jar`。
-   - 确认插件加载成功（检查 Burp 中是否出现 "SSE Server" 选项卡）。
+   - 确认插件加载成功（检查 Burp 中是否出现 "SSEncrypt" 选项卡）。
 
 3. **配置文件**（可选）：
-   - 插件首次运行时会在 JAR 文件所在目录创建 `sse_scripts.json`。
+   - 插件首次运行时会在 JAR 文件所在目录创建 `SSEncrypt.json`。
    - 可预先在该文件中填充加密/解密脚本（参见 [配置](#配置)）。
 
 ## 使用方法
 
 ### 启动 SSE 服务器
-1. 转到 Burp Suite 中的 **SSE Server** 选项卡。
+1. 转到 Burp Suite 中的 **SSEncrypt** 选项卡。
 2. 在 "Port" 字段中设置所需端口（默认：`8081`）。
 3. 点击 **Start Server** 启动内置 HTTP 服务器。
    - 服务器将处理 `/sse`、`/input` 和 `/result` 端点以实现实时通信。
@@ -60,13 +60,13 @@
 - 前往目标页面，并通过TamperMonkey菜单连接SSE服务器。
 
 ### 管理脚本
-1. 在 **SSE Server** 选项卡中，使用 "Encryption Scripts" 和 "Decryption Scripts" 列表查看现有脚本。
+1. 在 **SSEncrypt** 选项卡中，使用 "Encryption Scripts" 和 "Decryption Scripts" 列表查看现有脚本。
 2. 添加新脚本：
    - 输入 **脚本名称**。
    - 在文本编辑器中编写脚本内容（JavaScript 格式）。
    - 点击 **Add**（若修改现有脚本则为 **Update**）。
 3. 删除脚本：选中脚本后点击 **Delete**。
-4. 脚本会自动保存到 `sse_scripts.json`。
+4. 脚本会自动保存到 `SSEncrypt.json`。
 
 **脚本示例**：
 ```javascript
@@ -98,7 +98,7 @@ this.result(msg, decrypt(msg.input));
    - 调整正则表达式（基于选中文本自动生成）。
    - 从下拉列表中选择解密脚本。
    - 点击 **OK** 保存规则。
-4. 规则将显示在 **SSE Server** 选项卡的解密表中。
+4. 规则将显示在 **SSEncrypt** 选项卡的解密表中。
 
 ### 查看解密数据
 - 当请求/响应匹配解密规则时， **Decrypted** 选项卡将显示解密结果。
@@ -106,7 +106,7 @@ this.result(msg, decrypt(msg.input));
 
 ## 配置
 
-插件将脚本存储在 `sse_scripts.json` 中。示例结构：
+插件将脚本存储在 `SSEncrypt.json` 中。示例结构：
 ```json
 {
   "encrypt_scripts": [
@@ -127,7 +127,7 @@ this.result(msg, decrypt(msg.input));
 ## 故障排除
 
 - **服务器无法启动**：检查端口是否被占用（`netstat -an | grep 8081`）及防火墙设置。
-- **脚本未加载**：确保 `sse_scripts.json` 与 JAR 文件在同一目录且为有效的 JSON 格式。
+- **脚本未加载**：确保 `SSEncrypt.json` 与 JAR 文件在同一目录且为有效的 JSON 格式。
 - **解密失败**：确认正则表达式正确且脚本返回有效输出。查看 Burp 的 **Output** 选项卡以获取错误信息。
 
 ## 贡献
