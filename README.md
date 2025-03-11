@@ -1,23 +1,23 @@
 # Burp SSE Plugin
 
-**Burp SSE Plugin** is a Burp Suite extension designed to enhance HTTP request and response manipulation by integrating Server-Sent Events (SSE) and custom encryption/decryption scripts. This plugin provides a flexible framework for processing HTTP messages in real-time, allowing security researchers and pentesters to automate encryption/decryption workflows, manage scripts, and visualize decrypted data within Burp Suite.
+**Burp SSE Plugin** is a Burp Suite extension designed to enhance HTTP request and response manipulation by integrating Server-Sent Events (SSE) and custom encryption/decryption scripts. This plugin provides a flexible framework for real-time HTTP message processing, enabling security researchers and penetration testers to automate encryption/decryption workflows, manage scripts, and visualize decrypted data within Burp Suite.
 
-The plugin leverages an embedded HTTP server to handle SSE communication, supports dynamic script management, and offers a user-friendly GUI for configuration and rule management.
+The plugin includes an embedded HTTP server to handle SSE communication, supports dynamic script management, and offers a user-friendly GUI for configuration and rule management.
 
 ## Features
 
-- **Embedded HTTP Server**: Runs an SSE server within Burp Suite to process HTTP messages dynamically.
-- **Custom Encryption/Decryption Scripts**: Allows users to define and manage JavaScript-based encryption and decryption scripts stored in a JSON config file (`sse_scripts.json`).
+- **Embedded HTTP Server**: Runs an SSE server within Burp Suite to dynamically process HTTP messages.
+- **TamperMonkey Script Export**: Allows downloading a pre-configured TamperMonkey script to connect to the SSE server from a browser.
+- **Custom Encryption/Decryption Scripts**: Enables users to define and manage JavaScript-based encryption and decryption scripts, stored in a JSON configuration file (`sse_scripts.json`).
 - **Context Menu Integration**: Apply encryption scripts to selected HTTP request text and add decryption rules directly from the context menu.
 - **Message Editor Tab**: Displays decrypted HTTP request/response content in a dedicated tab based on predefined rules.
-- **GUI Management**: Manage scripts, server settings, and decryption rules via an intuitive interface in the Burp Suite tab "SSE Server".
 - **Dynamic Rule-Based Decryption**: Automatically decrypts HTTP messages matching user-defined URL paths and regex patterns.
-- **TamperMonkey Script Export**: Download a pre-configured TamperMonkey script for client-side testing.
+- **GUI Management**: Manage scripts, server settings, and decryption rules via the "SSE Server" tab in Burp Suite.
 - **Real-Time Processing**: Processes nested encryption tags (`[[scriptName:content]]`) in HTTP requests within Repeater and Intruder tools.
 
 ## Requirements
 
-- **Burp Suite Professional or Community Edition** (tested with Burp Suite 2023.x and later).
+- **Burp Suite Professional or Community Edition** (tested with version 2023.x and later).
 - **Java 8 or higher** (compatible with Burp Suite's Jython/embedded JVM).
 - Dependencies:
   - `org.json` (for JSON handling, included in the code).
@@ -36,9 +36,9 @@ The plugin leverages an embedded HTTP server to handle SSE communication, suppor
 
 2. **Load into Burp Suite**:
    - Open Burp Suite.
-   - Navigate to the **Extender** tab > **Extensions** > **Add**.
+   - Navigate to **Extender** tab > **Extensions** > **Add**.
    - Set the extension type to **Java** and select the compiled `BurpSSEPlugin.jar`.
-   - Confirm the plugin loads successfully (check the "SSE Server" tab in Burp).
+   - Confirm the plugin loads successfully (check for the "SSE Server" tab in Burp).
 
 3. **Configuration File** (optional):
    - The plugin creates `sse_scripts.json` in the same directory as the JAR file on first run.
@@ -52,6 +52,11 @@ The plugin leverages an embedded HTTP server to handle SSE communication, suppor
 3. Click **Start Server** to launch the embedded HTTP server.
    - The server handles `/sse`, `/input`, and `/result` endpoints for real-time communication.
 
+### Exporting TamperMonkey Script
+- Click **TamperMonkey Script** in the GUI to download `script.js`.
+- Import the script into the TamperMonkey extension in your browser.
+- Visit the target page and connect to the SSE server via the TamperMonkey menu.
+
 ### Managing Scripts
 1. In the **SSE Server** tab, use the "Encryption Scripts" and "Decryption Scripts" lists to view existing scripts.
 2. Add a new script:
@@ -61,7 +66,7 @@ The plugin leverages an embedded HTTP server to handle SSE communication, suppor
 3. Delete a script by selecting it and clicking **Delete**.
 4. Scripts are saved to `sse_scripts.json` automatically.
 
-**Script Example**:
+**Script Examples**:
 ```javascript
 // Encryption script
 function encrypt(input) {
@@ -94,11 +99,8 @@ this.result(msg, decrypt(msg.input));
 4. Rules appear in the decryption table in the **SSE Server** tab.
 
 ### Viewing Decrypted Data
-- When a request/response matches a decryption rule, a **Decrypted** tab appears in the message editor.
-- The tab displays the decrypted content in real-time (processed asynchronously).
-
-### Exporting TamperMonkey Script
-- Click **TamperMonkey Script** in the GUI to download `script.js` for client-side testing.
+- When a request/response matches a decryption rule, the **Decrypted** tab displays the decryption result.
+- If no rule matches, the **Decrypted** tab shows "No Match Rule".
 
 ## Configuration
 
@@ -116,9 +118,9 @@ The plugin stores scripts in `sse_scripts.json`. Example structure:
 
 ## Endpoints
 
-- **/sse**: Streams SSE messages for real-time updates.
+- **/sse**: Streams SSE messages to establish a connection with the browser TamperMonkey script.
+- **/result**: Receives processing results sent by the TamperMonkey script via POST requests.
 - **/input**: Accepts POST requests with JSON containing `input` and `script` for processing.
-- **/result**: Receives processing results via POST requests.
 
 ## Troubleshooting
 
@@ -142,3 +144,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with the Burp Suite Extender API.
 - Inspired by the need for flexible, real-time HTTP message processing in security testing.
+
