@@ -39,7 +39,7 @@
 2. **加载到 Burp Suite**：
    - 打开 Burp Suite。
    - 导航到 **Extender** 选项卡 > **Extensions** > **Add**。
-   - 将扩展类型设置为 **Java**，然后选择编译好的 `burp-sse-plugin-1.0-SNAPSHOT.jar`。
+   - 将扩展类型设置为 **Java**，然后选择编译好的 `SSEncrypt-1.0-SNAPSHOT.jar`。
    - 确认插件加载成功（检查 Burp 中是否出现 "SSEncrypt" 选项卡）。
 
 3. **配置文件**（可选）：
