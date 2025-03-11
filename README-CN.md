@@ -7,12 +7,12 @@
 ## 功能
 
 - **内置 HTTP 服务器**：在 Burp Suite 中运行一个 SSE 服务器，以动态处理 HTTP 消息。
+- **TamperMonkey 脚本导出**：支持下载预配置的 TamperMonkey 脚本用于连接SSE服务器。
 - **自定义加密/解密脚本**：允许用户定义和管理基于 JavaScript 的加密和解密脚本，存储在 JSON 配置文件（`sse_scripts.json`）中。
 - **上下文菜单集成**：通过右键菜单将加密脚本应用于选中的 HTTP 请求文本，并添加解密规则。
 - **消息编辑器选项卡**：在专用选项卡中显示根据预定义规则解密的 HTTP 请求/响应内容。
-- **图形界面管理**：通过 Burp Suite 的 "SSE Server" 选项卡管理脚本、服务器设置和解密规则。
 - **动态规则解密**：自动解密匹配用户定义的 URL 路径和正则表达式的 HTTP 消息。
-- **TamperMonkey 脚本导出**：支持下载预配置的 TamperMonkey 脚本用于客户端测试。
+- **图形界面管理**：通过 Burp Suite 的 "SSE Server" 选项卡管理脚本、服务器设置和解密规则。
 - **实时处理**：在 Repeater 和 Intruder 工具中处理 HTTP 请求中的嵌套加密标签（`[[scriptName:content]]`）。
 
 ## 要求
@@ -51,6 +51,11 @@
 2. 在 "Port" 字段中设置所需端口（默认：`8081`）。
 3. 点击 **Start Server** 启动内置 HTTP 服务器。
    - 服务器将处理 `/sse`、`/input` 和 `/result` 端点以实现实时通信。
+
+### 导出 TamperMonkey 脚本
+- 在图形界面中点击 **TamperMonkey Script** 下载 `script.js`。
+- 在浏览器的TamperMonkey插件中导入脚本。
+- 前往目标页面，并通过TamperMonkey菜单连接SSE服务器。
 
 ### 管理脚本
 1. 在 **SSE Server** 选项卡中，使用 "Encryption Scripts" 和 "Decryption Scripts" 列表查看现有脚本。
@@ -94,11 +99,8 @@ this.result(msg, decrypt(msg.input));
 4. 规则将显示在 **SSE Server** 选项卡的解密表中。
 
 ### 查看解密数据
-- 当请求/响应匹配解密规则时，消息编辑器中会出现 **Decrypted** 选项卡。
-- 该选项卡实时显示解密后的内容（异步处理）。
-
-### 导出 TamperMonkey 脚本
-- 在图形界面中点击 **TamperMonkey Script** 下载 `script.js` 用于客户端测试。
+- 当请求/响应匹配解密规则时， **Decrypted** 选项卡将显示解密结果。
+- 当请求/响应不匹配解密规则时， **Decrypted** 显示No Match Rule。
 
 ## 配置
 
@@ -116,9 +118,9 @@ this.result(msg, decrypt(msg.input));
 
 ## 端点
 
-- **/sse**：流式传输 SSE 消息以实现实时更新。
+- **/sse**：流式传输 SSE 消息以实现实时更新，与浏览器油猴脚本建立连接。
+- **/result**：浏览油猴脚本通过 POST 请求发送，接收处理结果。
 - **/input**：接受带有 `input` 和 `script` 的 JSON POST 请求进行处理。
-- **/result**：通过 POST 请求接收处理结果。
 
 ## 故障排除
 
@@ -142,3 +144,4 @@ this.result(msg, decrypt(msg.input));
 
 - 基于 Burp Suite Extender API 构建。
 - 灵感来源于安全测试中对灵活、实时 HTTP 消息处理的需求。
+
