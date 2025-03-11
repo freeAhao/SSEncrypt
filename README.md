@@ -28,16 +28,18 @@ The plugin includes an embedded HTTP server to handle SSE communication, support
 1. **Compile the Plugin**:
    - Clone this repository:
      ```bash
-     git clone https://github.com/yourusername/burp-sse-plugin.git
+     git clone https://github.com/freeAhao/burp-sse-plugin.git
      ```
-   - Open the project in your preferred Java IDE (e.g., IntelliJ IDEA, Eclipse).
-   - Ensure the Burp Suite Extender API (`burp.jar`) is added to your project’s classpath.
-   - Build the project to generate `BurpSSEPlugin.jar`.
+   - Compile the project using Maven:
+     ```bash
+     mvn compile package
+     ```
+   - If compile successful, you should find the compiled JAR file: `target/burp-sse-plugin-1.0-SNAPSHOT.jar`
 
 2. **Load into Burp Suite**:
    - Open Burp Suite.
    - Navigate to **Extender** tab > **Extensions** > **Add**.
-   - Set the extension type to **Java** and select the compiled `BurpSSEPlugin.jar`.
+   - Set the extension type to **Java** and select the compiled `burp-sse-plugin-1.0-SNAPSHOT.jar`.
    - Confirm the plugin loads successfully (check for the "SSE Server" tab in Burp).
 
 3. **Configuration File** (optional):
