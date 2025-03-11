@@ -1,5 +1,7 @@
 # SSEncrypt Plugin
 
+[中文](README-CN.md)
+
 **SSEncrypt Plugin** is a Burp Suite extension designed to enhance HTTP request and response manipulation by integrating Server-Sent Events (SSE) and custom encryption/decryption scripts. This plugin provides a flexible framework for real-time HTTP message processing, enabling security researchers and penetration testers to automate encryption/decryption workflows, manage scripts, and visualize decrypted data within Burp Suite.
 
 The plugin includes an embedded HTTP server to handle SSE communication, supports dynamic script management, and offers a user-friendly GUI for configuration and rule management.
