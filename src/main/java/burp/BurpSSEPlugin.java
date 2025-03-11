@@ -1,18 +1,21 @@
 package burp;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import javax.swing.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import javax.swing.JMenuItem;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IContextMenuFactory, IHttpListener, IMessageEditorTabFactory {
     private IBurpExtenderCallbacks callbacks;
@@ -25,14 +28,14 @@ public class BurpSSEPlugin implements IBurpExtender, IExtensionStateListener, IC
     protected volatile boolean isRunning = false;
     protected Map<String, String> encryptScripts = new HashMap<>();
     protected Map<String, String> decryptScripts = new HashMap<>();
-    private static final String CONFIG_FILE = "sse_scripts.json";
+    private static final String CONFIG_FILE = "SSEncrypt.json";
     private File configFile;
 
     @Override
     public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
         this.callbacks = callbacks;
         this.helpers = callbacks.getHelpers();
-        callbacks.setExtensionName("SSE Server Plugin");
+        callbacks.setExtensionName("SSEncrypt");
         callbacks.registerExtensionStateListener(this);
         callbacks.registerContextMenuFactory(this);
         callbacks.registerHttpListener(this);

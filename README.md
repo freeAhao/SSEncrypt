@@ -1,6 +1,6 @@
-# Burp SSE Plugin
+# SSEncrypt Plugin
 
-**Burp SSE Plugin** is a Burp Suite extension designed to enhance HTTP request and response manipulation by integrating Server-Sent Events (SSE) and custom encryption/decryption scripts. This plugin provides a flexible framework for real-time HTTP message processing, enabling security researchers and penetration testers to automate encryption/decryption workflows, manage scripts, and visualize decrypted data within Burp Suite.
+**SSEncrypt Plugin** is a Burp Suite extension designed to enhance HTTP request and response manipulation by integrating Server-Sent Events (SSE) and custom encryption/decryption scripts. This plugin provides a flexible framework for real-time HTTP message processing, enabling security researchers and penetration testers to automate encryption/decryption workflows, manage scripts, and visualize decrypted data within Burp Suite.
 
 The plugin includes an embedded HTTP server to handle SSE communication, supports dynamic script management, and offers a user-friendly GUI for configuration and rule management.
 
@@ -8,11 +8,11 @@ The plugin includes an embedded HTTP server to handle SSE communication, support
 
 - **Embedded HTTP Server**: Runs an SSE server within Burp Suite to dynamically process HTTP messages.
 - **TamperMonkey Script Export**: Allows downloading a pre-configured TamperMonkey script to connect to the SSE server from a browser.
-- **Custom Encryption/Decryption Scripts**: Enables users to define and manage JavaScript-based encryption and decryption scripts, stored in a JSON configuration file (`sse_scripts.json`).
+- **Custom Encryption/Decryption Scripts**: Enables users to define and manage JavaScript-based encryption and decryption scripts, stored in a JSON configuration file (`SSEncrypt.json`).
 - **Context Menu Integration**: Apply encryption scripts to selected HTTP request text and add decryption rules directly from the context menu.
 - **Message Editor Tab**: Displays decrypted HTTP request/response content in a dedicated tab based on predefined rules.
 - **Dynamic Rule-Based Decryption**: Automatically decrypts HTTP messages matching user-defined URL paths and regex patterns.
-- **GUI Management**: Manage scripts, server settings, and decryption rules via the "SSE Server" tab in Burp Suite.
+- **GUI Management**: Manage scripts, server settings, and decryption rules via the "SSEncrypt" tab in Burp Suite.
 - **Real-Time Processing**: Processes nested encryption tags (`[[scriptName:content]]`) in HTTP requests within Repeater and Intruder tools.
 
 ## Requirements
@@ -28,28 +28,28 @@ The plugin includes an embedded HTTP server to handle SSE communication, support
 1. **Compile the Plugin**:
    - Clone this repository:
      ```bash
-     git clone https://github.com/freeAhao/burp-sse-plugin.git
+     git clone https://github.com/freeAhao/SSEncrypt.git
      ```
    - Compile the project using Maven:
      ```bash
      mvn compile package
      ```
-   - If compile successful, you should find the compiled JAR file: `target/burp-sse-plugin-1.0-SNAPSHOT.jar`
+   - If compile successful, you should find the compiled JAR file: `target/SSEncrypt-1.0-SNAPSHOT.jar`
 
 2. **Load into Burp Suite**:
    - Open Burp Suite.
    - Navigate to **Extender** tab > **Extensions** > **Add**.
    - Set the extension type to **Java** and select the compiled `burp-sse-plugin-1.0-SNAPSHOT.jar`.
-   - Confirm the plugin loads successfully (check for the "SSE Server" tab in Burp).
+   - Confirm the plugin loads successfully (check for the "SSEncrypt" tab in Burp).
 
 3. **Configuration File** (optional):
-   - The plugin creates `sse_scripts.json` in the same directory as the JAR file on first run.
+   - The plugin creates `SSEncrypt.json` in the same directory as the JAR file on first run.
    - Pre-populate this file with encryption/decryption scripts if desired (see [Configuration](#configuration)).
 
 ## Usage
 
-### Starting the SSE Server
-1. Go to the **SSE Server** tab in Burp Suite.
+### Starting the SSEncrypt
+1. Go to the **SSEncrypt** tab in Burp Suite.
 2. Set the desired port (default: `8081`) in the "Port" field.
 3. Click **Start Server** to launch the embedded HTTP server.
    - The server handles `/sse`, `/input`, and `/result` endpoints for real-time communication.
@@ -60,13 +60,13 @@ The plugin includes an embedded HTTP server to handle SSE communication, support
 - Visit the target page and connect to the SSE server via the TamperMonkey menu.
 
 ### Managing Scripts
-1. In the **SSE Server** tab, use the "Encryption Scripts" and "Decryption Scripts" lists to view existing scripts.
+1. In the **SSEncrypt** tab, use the "Encryption Scripts" and "Decryption Scripts" lists to view existing scripts.
 2. Add a new script:
    - Enter a **Script Name**.
    - Write the script content in the text editor (JavaScript format).
    - Click **Add** (or **Update** if modifying an existing script).
 3. Delete a script by selecting it and clicking **Delete**.
-4. Scripts are saved to `sse_scripts.json` automatically.
+4. Scripts are saved to `SSEncrypt.json` automatically.
 
 **Script Examples**:
 ```javascript
@@ -98,7 +98,7 @@ this.result(msg, decrypt(msg.input));
    - Adjust the regex pattern (auto-generated based on selection).
    - Select a decryption script from the dropdown.
    - Click **OK** to save the rule.
-4. Rules appear in the decryption table in the **SSE Server** tab.
+4. Rules appear in the decryption table in the **SSEncrypt** tab.
 
 ### Viewing Decrypted Data
 - When a request/response matches a decryption rule, the **Decrypted** tab displays the decryption result.
@@ -106,7 +106,7 @@ this.result(msg, decrypt(msg.input));
 
 ## Configuration
 
-The plugin stores scripts in `sse_scripts.json`. Example structure:
+The plugin stores scripts in `SSEncrypt.json`. Example structure:
 ```json
 {
   "encrypt_scripts": [
@@ -127,7 +127,7 @@ The plugin stores scripts in `sse_scripts.json`. Example structure:
 ## Troubleshooting
 
 - **Server Won’t Start**: Check port availability (`netstat -an | grep 8081`) and firewall settings.
-- **Scripts Not Loading**: Verify `sse_scripts.json` is in the same directory as the JAR and is valid JSON.
+- **Scripts Not Loading**: Verify `SSEncrypt.json` is in the same directory as the JAR and is valid JSON.
 - **Decryption Fails**: Ensure regex patterns are correct and scripts return valid output. Check Burp’s **Output** tab for errors.
 
 ## Contributing
