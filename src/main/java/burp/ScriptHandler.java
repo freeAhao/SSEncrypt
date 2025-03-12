@@ -51,7 +51,6 @@ public class ScriptHandler {
             plugin.getCallbacks().printOutput("Script added: " + name + " to " +
                     (isEncryptListSelected ? "encrypt" : "decrypt") + " list");
             plugin.saveScriptsToConfig();
-            addScript.setText("Add");
         }
     }
 
@@ -82,7 +81,7 @@ public class ScriptHandler {
             isEncryptListSelected = true;
             scriptNameField.setText(selected);
             scriptContentArea.setText(plugin.getEncryptScripts().get(selected).getBytes());
-            addScript.setText(encryptScriptListModel.contains(selected) ? "Update" : "Add");
+            addScript.setText(encryptScriptListModel.contains(selected) ? "Update Encrypt" : "Add Encrypt");
         }
     }
 
@@ -92,7 +91,7 @@ public class ScriptHandler {
             isEncryptListSelected = false;
             scriptNameField.setText(selected);
             scriptContentArea.setText(plugin.getDecryptScripts().get(selected).getBytes());
-            addScript.setText(decryptScriptListModel.contains(selected) ? "Update" : "Add");
+            addScript.setText(decryptScriptListModel.contains(selected) ? "Update Decrypt" : "Add Decrypt");
         }
     }
 
@@ -128,5 +127,9 @@ public class ScriptHandler {
             this.encryptScriptList.clearSelection();
         }
 
+    }
+
+    public boolean isEncryptListSelected() {
+        return isEncryptListSelected;
     }
 }

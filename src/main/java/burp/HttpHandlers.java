@@ -10,15 +10,20 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class HttpHandlers {
-    static class SSEHandler implements HttpHandler {
+    static  class SSEHandler implements HttpHandler {
         private final BurpSSEPlugin plugin;
 
         public SSEHandler(BurpSSEPlugin plugin) {
             this.plugin = plugin;
         }
 
+        private void cleanMessage(){
+            this.plugin.getMessages().clear();
+        }
+
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            cleanMessage();
             HttpUtils.setCORSHeaders(exchange);
             exchange.getResponseHeaders().set("Content-Type", "text/event-stream");
             exchange.getResponseHeaders().set("Cache-Control", "no-cache");
@@ -26,17 +31,28 @@ public class HttpHandlers {
             exchange.sendResponseHeaders(200, 0);
 
             try (OutputStream os = exchange.getResponseBody()) {
-                while (true) {
-                    String msg = plugin.getMessages().take();
-                    os.write(("data: " + msg + "\n\n").getBytes());
-                    os.flush();
+                while (plugin.isRunning()) {
+                    try {
+                        String msg = plugin.getMessages().poll(1, TimeUnit.SECONDS);
+                        if (msg != null) {
+                            os.write(("data: " + msg + "\n\n").getBytes());
+                            os.flush();
+                        }
+                    } catch (IOException e) {
+                        plugin.getCallbacks().printOutput("Client disconnect: " + e.getMessage());
+                        break;
+                    }
+                    catch (InterruptedException e) {
+                        plugin.getCallbacks().printOutput("SSE interrupted: " + e.getMessage());
+                        break;
+                    }
                 }
-            } catch (InterruptedException e) {
-                plugin.getCallbacks().printOutput("SSE interrupted: " + e.getMessage());
+            } finally {
+                exchange.close();
+                plugin.getCallbacks().printOutput("SSE Connection Close");
             }
         }
     }
-
     static class ResultHandler implements HttpHandler {
         private final BurpSSEPlugin plugin;
 

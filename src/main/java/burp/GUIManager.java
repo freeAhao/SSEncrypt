@@ -142,12 +142,13 @@ public class GUIManager {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (scriptHandler.contains(scriptNameField.getText())) {
-                    addScript.setText("Update");
+                    addScript.setText("Update " + (scriptHandler.isEncryptListSelected()? "Encrypt":"Decrypt"));
                 } else {
-                    addScript.setText("Add");
+                    addScript.setText("Add " + (scriptHandler.isEncryptListSelected()? "Encrypt":"Decrypt"));
                 }
             }
         });
+
         encryptScriptList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {

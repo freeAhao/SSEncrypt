@@ -69,7 +69,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._handle_request()
 
 if __name__ == "__main__":
-    server_address = ('', 8000)
+    server_address = ('', 5000)
     httpd = HTTPServer(server_address, RequestHandler)
-    print("Serving on port 8000...")
+    print("Serving on port 5000...")
     httpd.serve_forever()
