@@ -11,6 +11,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 public class GUIManager {
@@ -25,7 +26,7 @@ public class GUIManager {
     private JTextField scriptNameField;
     private ITextEditor scriptContentArea; // Replaced RSyntaxTextArea with ITextEditor
     private final HttpServerManager serverManager;
-    private JTable decryptTable;
+    private JTable ruleTable;
 
     public GUIManager(BurpSSEPlugin plugin) {
         this.plugin = plugin;
@@ -87,32 +88,58 @@ public class GUIManager {
         scriptContentArea.setEditable(true);
 
         // 创建表格 - 5列
-        String[] columnNames = {"URL Path", "Regex Pattern", "Req/Res", "Decrypt Script", "Enabled"};
+        String[] columnNames = {"URL Path", "Regex Pattern", "Req/Res", "Enc/Dec", "Script", "Enabled"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 4) return Boolean.class; // Enabled column as Boolean for checkbox
+                if (columnIndex == 5) return Boolean.class; // Enabled column as Boolean for checkbox
                 return String.class;
             }
         };
-        decryptTable = new JTable(tableModel);
-        JScrollPane tableScrollPane = new JScrollPane(decryptTable);
+        ruleTable = new JTable(tableModel);
+        JScrollPane tableScrollPane = new JScrollPane(ruleTable);
         tableScrollPane.setPreferredSize(new Dimension(400, 200));
 
         // 配置第2列 (Req/Res) 下拉框
         JComboBox<String> reqResCombo = new JComboBox<>(new String[]{"request", "response"});
-        decryptTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(reqResCombo));
+        ruleTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(reqResCombo));
 
-        // 配置第3列 (Decrypt Script) 下拉框
-        JComboBox<String> scriptCombo = new JComboBox<>();
-        Map<String, String> decryptScripts = plugin.getDecryptScripts();
-        if (decryptScripts != null) {
-            decryptScripts.keySet().forEach(scriptCombo::addItem);
-        }
-        decryptTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(scriptCombo));
+        // 自定义 Script 列的 TableCellEditor
 
-        // 配置第4列 (Enabled) 复选框 - 默认启用
-        decryptTable.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
+        ScriptCellEditor scriptCellEditor = new ScriptCellEditor();
+        ruleTable.getColumnModel().getColumn(4).setCellEditor(scriptCellEditor);
+
+        // 配置第3列 (Enc/Dec) 下拉框
+        JComboBox<String> encDecCombo = new JComboBox<>(new String[]{"encrypt", "decrypt"});
+        ruleTable.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(encDecCombo));
+        encDecCombo.addActionListener(e -> {
+            String encDec = (String) encDecCombo.getSelectedItem();
+            int editingRow = ruleTable.getEditingRow();
+            if (editingRow != -1) {
+                JComboBox<String> scriptCombo = new JComboBox<>();
+                Map<String, String> scripts;
+                if ("encrypt".equals(encDec)) {
+                    scripts = plugin.getEncryptScripts();
+                } else {
+                    scripts = plugin.getDecryptScripts();
+                }
+                if (scripts != null) {
+                    scripts.keySet().forEach(scriptCombo::addItem);
+                    String script = (String)ruleTable.getValueAt(editingRow, 4);
+                    if (!scripts.containsKey(script)) {
+                        ruleTable.setValueAt("", editingRow, 4);
+                    }
+                }
+
+                scriptCellEditor.setRowEditor(editingRow, scriptCombo);
+                if (ruleTable.getCellEditor() != null) {
+                    ruleTable.getCellEditor().stopCellEditing();
+                }
+            }
+        });
+
+        // 配置第5列 (Enabled) 复选框 - 默认启用
+        ruleTable.getColumnModel().getColumn(5).setCellRenderer(new TableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 JCheckBox checkBox = new JCheckBox();
@@ -142,9 +169,9 @@ public class GUIManager {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (scriptHandler.contains(scriptNameField.getText())) {
-                    addScript.setText("Update " + (scriptHandler.isEncryptListSelected()? "Encrypt":"Decrypt"));
+                    addScript.setText("Update " + (scriptHandler.isEncryptListSelected() ? "Encrypt" : "Decrypt"));
                 } else {
-                    addScript.setText("Add " + (scriptHandler.isEncryptListSelected()? "Encrypt":"Decrypt"));
+                    addScript.setText("Add " + (scriptHandler.isEncryptListSelected() ? "Encrypt" : "Decrypt"));
                 }
             }
         });
@@ -231,13 +258,27 @@ public class GUIManager {
         stopButton.setEnabled(running);
     }
 
-    public void addDecryptRule(String urlPath, String regex, Boolean reqOrRes, String selectedScript) {
-        DefaultTableModel model = (DefaultTableModel) decryptTable.getModel();
-        model.addRow(new Object[]{urlPath, regex, reqOrRes ? "request" : "response", selectedScript, true}); // Default enabled
+    public void addRule(String urlPath, String regex, Boolean reqOrRes, Boolean isEnc, String selectedScript) {
+        DefaultTableModel model = (DefaultTableModel) ruleTable.getModel();
+        String encDec = isEnc ? "encrypt" : "decrypt";
+        int newRowIndex = model.getRowCount(); // 获取新行的索引
+        model.addRow(new Object[]{urlPath, regex, reqOrRes ? "request" : "response", encDec, selectedScript, true}); // Default enabled
+
+        // 获取 Script 列的自定义编辑器
+        TableCellEditor editor = ruleTable.getColumnModel().getColumn(4).getCellEditor();
+        if (editor instanceof ScriptCellEditor) {
+            ScriptCellEditor scriptCellEditor = (ScriptCellEditor) editor;
+            JComboBox<String> scriptCombo = new JComboBox<>();
+            Map<String, String> scripts = isEnc ? plugin.getEncryptScripts() : plugin.getDecryptScripts();
+            if (scripts != null) {
+                scripts.keySet().forEach(scriptCombo::addItem);
+            }
+            scriptCellEditor.setRowEditor(newRowIndex, scriptCombo);
+        }
     }
 
-    public JTable getDecryptTable() {
-        return decryptTable;
+    public JTable getRuleTable() {
+        return ruleTable;
     }
 
     class BurpTab implements ITab {
@@ -254,5 +295,27 @@ public class GUIManager {
 
     public HttpServerManager getServerManager() {
         return serverManager;
+    }
+
+
+    class ScriptCellEditor extends AbstractCellEditor implements TableCellEditor {
+        private JComboBox<String> currentCombo;
+        private Map<Integer, JComboBox<String>> rowEditors = new HashMap<>();
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            currentCombo = rowEditors.getOrDefault(row, new JComboBox<>());
+            currentCombo.setSelectedItem(value);
+            return currentCombo;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return currentCombo.getSelectedItem();
+        }
+
+        public void setRowEditor(int row, JComboBox<String> comboBox) {
+            rowEditors.put(row, comboBox);
+        }
     }
 }

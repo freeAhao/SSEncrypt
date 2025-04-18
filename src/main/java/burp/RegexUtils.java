@@ -48,7 +48,7 @@ public class RegexUtils {
      * 统计正则表达式在文本A中的匹配次数
      */
     private static int countMatches(String textA, String regex) {
-        Pattern pattern = Pattern.compile(regex);
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(textA);
         int count = 0;
         while (matcher.find()) {

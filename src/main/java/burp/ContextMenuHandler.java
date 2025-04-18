@@ -1,10 +1,14 @@
 package burp;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Highlighter;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -32,10 +36,10 @@ public class ContextMenuHandler {
             }
             menu.add(scriptMenu);
 
-            // 添加 "Add Decrypt Rule" 菜单项
-            JMenuItem addDecryptRuleItem = new JMenuItem("Add Decrypt Rule");
-            addDecryptRuleItem.addActionListener(e -> showAddDecryptRuleDialog(invocation));
-            menu.add(addDecryptRuleItem);
+            // 添加 "Add Rule" 菜单项
+            JMenuItem addRuleItem = new JMenuItem("Add Rule");
+            addRuleItem.addActionListener(e -> showAddRuleDialog(invocation));
+            menu.add(addRuleItem);
 
             return menu;
         }
@@ -55,7 +59,7 @@ public class ContextMenuHandler {
         message.setRequest(newRequest);
     }
 
-    private void showAddDecryptRuleDialog(IContextMenuInvocation invocation) {
+    private void showAddRuleDialog(IContextMenuInvocation invocation) {
         IHttpRequestResponse message = invocation.getSelectedMessages()[0];
         int[] bounds = invocation.getSelectionBounds();
         boolean isReq = (invocation.getInvocationContext() == IContextMenuInvocation.CONTEXT_MESSAGE_EDITOR_REQUEST ||
@@ -68,7 +72,7 @@ public class ContextMenuHandler {
         }
 
         // 创建对话框
-        JDialog dialog = new JDialog((Frame) null, "Add Decrypt Rule", true);
+        JDialog dialog = new JDialog((Frame) null, "Add Rule", true);
         dialog.setLayout(new BorderLayout(10, 10));
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(null);
@@ -95,14 +99,20 @@ public class ContextMenuHandler {
         JTextField regexField = new JTextField(40);
         regexField.setText(generateRegex);
 
-        // 解密脚本下拉列表
-        JComboBox<String> decryptScriptCombo = new JComboBox<>();
+        // 加密或解密下拉列表
+        JComboBox<String> scriptModeCombo = new JComboBox<>();
+        scriptModeCombo.addItem("encrypt");
+        scriptModeCombo.addItem("decrypt");
+        scriptModeCombo.setSelectedItem("decrypt");
+
+        // 脚本下拉列表
+        JComboBox<String> scriptCombo = new JComboBox<>();
         for (String scriptName : plugin.getDecryptScripts().keySet()) {
-            decryptScriptCombo.addItem(scriptName);
+            scriptCombo.addItem(scriptName);
         }
-        if (decryptScriptCombo.getItemCount() == 0) {
-            decryptScriptCombo.addItem("No decrypt scripts available");
-            decryptScriptCombo.setEnabled(false);
+        if (scriptCombo.getItemCount() == 0) {
+            scriptCombo.addItem("No decrypt scripts available");
+            scriptCombo.setEnabled(false);
         }
 
         // URL Path
@@ -118,17 +128,37 @@ public class ContextMenuHandler {
         buttonPanel.add(cancelButton);
 
         // 布局组件
-        JPanel inputPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 5, 5));
         inputPanel.add(new JLabel("URL Path:"));
         inputPanel.add(urlPathField);
         inputPanel.add(new JLabel("Regex Pattern:"));
         inputPanel.add(regexField);
-        inputPanel.add(new JLabel("Decrypt Script:"));
-        inputPanel.add(decryptScriptCombo);
+        inputPanel.add(new JLabel("Mode:"));
+        inputPanel.add(scriptModeCombo);
+        inputPanel.add(new JLabel("Script:"));
+        inputPanel.add(scriptCombo);
 
         dialog.add(messageScrollPane, BorderLayout.CENTER);
         dialog.add(inputPanel, BorderLayout.NORTH);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        scriptModeCombo.addActionListener(e->{
+            String scriptMode = (String)scriptModeCombo.getSelectedItem();
+            Map<String, String> scripts;
+            if (scriptMode.equals("encrypt")) {
+                scripts = plugin.getEncryptScripts();
+            } else {
+                scripts = plugin.getDecryptScripts();
+            }
+            scriptCombo.removeAllItems();
+            for (String scriptName : scripts.keySet()) {
+                scriptCombo.addItem(scriptName);
+            }
+            if (scriptCombo.getItemCount() == 0) {
+                scriptCombo.addItem("No decrypt scripts available");
+                scriptCombo.setEnabled(false);
+            }
+        });
 
         // 监听消息编辑框的选择变化
         messageArea.addCaretListener(e -> {
@@ -171,10 +201,17 @@ public class ContextMenuHandler {
                 }
 
                 try {
-                    Pattern pattern = Pattern.compile(regex);
+                    Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
                     Matcher matcher = pattern.matcher(contentString);
                     int matchCount = 0;
+                    Highlighter highlighter = messageArea.getHighlighter();
+                    highlighter.removeAllHighlights();
                     while (matcher.find()) {
+
+                        if (matcher.groupCount() >= 1 && matcher.group(1) != null) {
+                            highlighter.addHighlight(matcher.start(1), matcher.end(1), new DefaultHighlighter.DefaultHighlightPainter(Color.yellow));
+                        }
+
                         matchCount++;
                         if (matchCount > 1) {
                             break;
@@ -184,18 +221,20 @@ public class ContextMenuHandler {
                 } catch (PatternSyntaxException e) {
                     plugin.getCallbacks().printError("Invalid regex: " + e.getMessage());
                     okButton.setEnabled(false);
+                } catch (BadLocationException e) {
+                    throw new RuntimeException(e);
                 }
             }
         });
 
         // OK 按钮事件：保存规则
         okButton.addActionListener(e -> {
-            String selectedScript = (String) decryptScriptCombo.getSelectedItem();
+            String selectedScript = (String) scriptCombo.getSelectedItem();
             if (selectedScript != null && !selectedScript.equals("No decrypt scripts available")) {
                 String regex = regexField.getText().trim();
+                Boolean isEnc = scriptModeCombo.getSelectedItem().equals("encrypt");
                 if (!regex.isEmpty()) {
-                    plugin.getGuiManager().addDecryptRule(urlPath, regex, isReq, selectedScript);
-                    plugin.getCallbacks().printOutput("Added decrypt rule: " + urlPath + " | " + regex + " | " + selectedScript);
+                    plugin.getGuiManager().addRule(urlPath, regex, isReq, isEnc, selectedScript);
                     dialog.dispose();
                 }
             }

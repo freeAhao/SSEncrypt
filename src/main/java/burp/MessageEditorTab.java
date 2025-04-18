@@ -86,19 +86,22 @@ public class MessageEditorTab implements IMessageEditorTab {
         }
 
         IRequestInfo requestInfo = plugin.getHelpers().analyzeRequest(httpService, request);
-        JTable decryptTable = plugin.getGuiManager().getDecryptTable();
+        JTable ruleTable = plugin.getGuiManager().getRuleTable();
         String messageContent = new String(content, StandardCharsets.UTF_8);
 
-        for (int i = 0; i < decryptTable.getRowCount(); i++) {
-            Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
+        for (int i = 0; i < ruleTable.getRowCount(); i++) {
+            Boolean enabled = (Boolean) ruleTable.getValueAt(i, 5);
             if (enabled != null && !enabled) {continue;}
-            String urlPath = (String) decryptTable.getValueAt(i, 0);
-            String regex = (String) decryptTable.getValueAt(i, 1);
-            String type = (String) decryptTable.getValueAt(i, 2);
+            String isEnc = (String) ruleTable.getValueAt(i, 3);
+            if (isEnc != null && !isEnc.equals("decrypt")) {continue;}
+
+            String urlPath = (String) ruleTable.getValueAt(i, 0);
+            String regex = (String) ruleTable.getValueAt(i, 1);
+            String type = (String) ruleTable.getValueAt(i, 2);
             if (requestInfo.getUrl().getPath().equals(urlPath)) {
                 if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
                     try {
-                        Pattern pattern = Pattern.compile(regex);
+                        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
                         Matcher matcher = pattern.matcher(messageContent);
                         if (matcher.find()) {
                             return true;
@@ -134,7 +137,7 @@ public class MessageEditorTab implements IMessageEditorTab {
 
                 IRequestInfo requestInfo = plugin.getHelpers().analyzeRequest(httpService, request);
                 String url = requestInfo.getUrl().toString();
-                JTable decryptTable = plugin.getGuiManager().getDecryptTable();
+                JTable ruleTable = plugin.getGuiManager().getRuleTable();
                 String currentResult = originalMessage;
                 boolean matchedRule;
                 ArrayList<Integer> usedRules = new ArrayList<>();
@@ -142,20 +145,24 @@ public class MessageEditorTab implements IMessageEditorTab {
                 // Recursive decryption loop
                 do {
                     matchedRule = false;
-                    for (int i = 0; i < decryptTable.getRowCount(); i++) {
-                        Boolean enabled = (Boolean) decryptTable.getValueAt(i, 4);
+                    for (int i = 0; i < ruleTable.getRowCount(); i++) {
+                        Boolean enabled = (Boolean) ruleTable.getValueAt(i, 5);
+                        String encDec = (String) ruleTable.getValueAt(i, 3);
+                        if (!encDec.equals("decrypt")){
+                            continue;
+                        }
                         if (enabled != null && !enabled) {continue;}
-                        String urlPath = (String) decryptTable.getValueAt(i, 0);
-                        String regex = (String) decryptTable.getValueAt(i, 1);
-                        String type = (String) decryptTable.getValueAt(i, 2);
-                        String scriptName = (String) decryptTable.getValueAt(i, 3);
+                        String urlPath = (String) ruleTable.getValueAt(i, 0);
+                        String regex = (String) ruleTable.getValueAt(i, 1);
+                        String type = (String) ruleTable.getValueAt(i, 2);
+                        String scriptName = (String) ruleTable.getValueAt(i, 4);
                         if (usedRules.contains(i)) {
                             continue;
                         }
 
                         if (requestInfo.getUrl().getPath().equals(urlPath)) {
                             if ((isRequest && "request".equals(type)) || (!isRequest && "response".equals(type))) {
-                                Pattern pattern = Pattern.compile(regex);
+                                Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
                                 Matcher matcher = pattern.matcher(currentResult);
                                 if (matcher.find()) {
                                     usedRules.add(i);
